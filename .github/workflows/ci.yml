@@ -1,0 +1,54 @@
+# .github/workflows/ci.yml
+name: Python CI
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.13"] # Oder die Python-Version, die du in pyproject.toml nutzt
+                                 # Kann auch 3.12, 3.11 etc. sein, um Kompatibilität zu prüfen
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Poetry
+        run: pip install poetry
+
+      - name: Install dependencies
+        run: poetry install --no-root # --no-root verhindert, dass das eigene Paket installiert wird, da wir es nur prüfen wollen
+
+      - name: Run Ruff (Linting)
+        run: poetry run ruff check .
+
+      - name: Run Ruff (Formatting Check)
+        run: poetry run ruff format . --check # Nur prüfen, nicht ändern
+
+      - name: Run MyPy (Type Checking)
+        run: poetry run mypy src/
+
+      - name: Run Tests
+        run: poetry run pytest --cov=src --cov-report=xml
+      
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage.xml # Stellt sicher, dass pytest --cov-report=xml eine coverage.xml erstellt
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: true
