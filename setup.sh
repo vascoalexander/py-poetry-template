@@ -94,7 +94,13 @@ while [ "$PYTHON_VERSION_VALID" = false ]; do
         PYTHON_VERSION_VALID=true
     fi
 done
+echo "Verwende Python-Version: $PYTHON_VERSION"
+echo ""
 
+# --- .env Datei erstellen/aktualisieren ---
+echo -e "${YELLOW}Erstelle/Aktualisiere .env Datei mit Python-Version...${NC}"
+echo "PYTHON_VERSION=$PYTHON_VERSION" > .env
+echo ".env Datei mit PYTHON_VERSION=$PYTHON_VERSION erstellt/aktualisiert."
 echo ""
 
 # --- 2. pyproject.toml anpassen ---
