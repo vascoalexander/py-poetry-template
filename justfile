@@ -35,7 +35,7 @@ clean-image:
 shell: build
     @echo "Starting interactive shell in development container..."
     docker run -it --rm \
-        -e PATH="{{CONTAINER_PATH}}" \ # <--- HIER HINZUFÜGEN
+        -e PATH="{{CONTAINER_PATH}}" \
         -v {{SRC_DIR}}:/app \
         {{CONTAINER_IMAGE}} \
         bash
@@ -45,7 +45,7 @@ shell: build
 debug-pre-commit: build
     @echo "Starting debug shell in container for pre-commit issues..."
     docker run -it --rm \
-        -e PATH="{{CONTAINER_PATH}}" \ # <--- HIER HINZUFÜGEN
+        -e PATH="{{CONTAINER_PATH}}" \
         -v {{SRC_DIR}}:/app \
         {{CONTAINER_IMAGE}} \
         bash -c " \
@@ -73,7 +73,7 @@ debug-pre-commit: build
 check: build
     @echo "Running linting checks..."
     docker run --rm \
-        -e PATH="{{CONTAINER_PATH}}" \ # <--- HIER HINZUFÜGEN
+        -e PATH="{{CONTAINER_PATH}}" \
         -v {{SRC_DIR}}:/app \
         {{CONTAINER_IMAGE}} \
         poetry run ruff check /app/src /app/tests
@@ -83,7 +83,7 @@ check: build
 format: build
     @echo "Formatting code..."
     docker run --rm \
-        -e PATH="{{CONTAINER_PATH}}" \ # <--- HIER HINZUFÜGEN
+        -e PATH="{{CONTAINER_PATH}}" \
         -v {{SRC_DIR}}:/app \
         {{CONTAINER_IMAGE}} \
         poetry run ruff format /app/src /app/tests
@@ -93,7 +93,7 @@ format: build
 test: build
     @echo "Running tests..."
     docker run --rm \
-        -e PATH="{{CONTAINER_PATH}}" \ # <--- HIER HINZUFÜGEN
+        -e PATH="{{CONTAINER_PATH}}" \
         -v {{SRC_DIR}}:/app \
         {{CONTAINER_IMAGE}} \
         poetry run pytest /app/tests
@@ -103,7 +103,7 @@ test: build
 pre-commit-run: build
     @echo "Running pre-commit hooks in container..."
     docker run --rm \
-        -e PATH="{{CONTAINER_PATH}}" \ # <--- HIER HINZUFÜGEN
+        -e PATH="{{CONTAINER_PATH}}" \
         -v {{SRC_DIR}}:/app \
         {{CONTAINER_IMAGE}} \
         poetry run pre-commit run --all-files
@@ -113,7 +113,7 @@ pre-commit-run: build
 run: build
     @echo "Running the application..."
     docker run --rm \
-        -e PATH="{{CONTAINER_PATH}}" \ # <--- HIER HINZUFÜGEN
+        -e PATH="{{CONTAINER_PATH}}" \
         -v {{SRC_DIR}}:/app \
         {{CONTAINER_IMAGE}} \
         poetry run python /app/src/{{PACKAGE_NAME}}/main.py
