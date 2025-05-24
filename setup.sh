@@ -108,6 +108,45 @@ sed -i.bak "s/^python = \"\^.*\"/python = \"^$PYTHON_VERSION\"/" pyproject.toml
 rm -f pyproject.toml.bak
 echo "pyproject.toml wurde aktualisiert."
 
+# --- NEU: 2.5: Poetry.lock Datei generieren (auf dem Host) ---
+# Dies ist notwendig, damit Docker die poetry.lock beim Build kopieren kann.
+echo -e "${YELLOW}Schritt 2.5: poetry.lock Datei generieren...${NC}"
+
+# Überprüfe, ob Poetry auf dem Host installiert ist
+if ! command -v poetry &> /dev/null; then
+    echo -e "${YELLOW}Poetry wurde auf Ihrem Host nicht gefunden. Versuche, Poetry zu installieren...${NC}"
+
+    # Versuche, pipx zu installieren
+    if ! command -v pipx &> /dev/null; then
+        echo -e "${YELLOW}pipx wurde nicht gefunden. Versuche, pipx zu installieren...${NC}"
+        # --break-system-packages wird manchmal unter bestimmten Linux-Distributionen benötigt,
+        # wenn pipx ansonsten Probleme mit dem System-Python hat.
+        python3 -m pip install --user pipx || { echo -e "${RED}Fehler: Konnte pipx nicht installieren. Bitte installieren Sie pipx manuell (z.B. 'pip install --user pipx') und versuchen Sie es erneut.${NC}"; exit 1; }
+        python3 -m pipx ensurepath || { echo -e "${RED}Fehler: Konnte pipx Pfad nicht zur PATH-Umgebungsvariable hinzufügen. Bitte prüfen Sie Ihre Installation.${NC}"; }
+        # Ein Hinweis, dass der Benutzer das Terminal neu starten muss, ist hier wichtig,
+        # da 'source' in einem Subshell-Skript nicht dauerhaft wirkt.
+        echo -e "${YELLOW}Hinweis: Möglicherweise müssen Sie dieses Terminal schließen und ein neues öffnen, damit 'pipx' und 'poetry' im PATH verfügbar sind.${NC}"
+        echo -e "${GREEN}pipx wurde installiert und zum PATH hinzugefügt.${NC}"
+    fi
+
+    # Installiere Poetry mit pipx
+    # Hier könnte auch ein `|| true` stehen, wenn wir den Fehler nicht fatal machen wollen,
+    # aber ein Fehler hier bedeutet meist, dass nichts weiter funktionieren würde.
+    pipx install poetry || { echo -e "${RED}Fehler: Konnte Poetry nicht mit pipx installieren. Bitte versuchen Sie es manuell: 'pipx install poetry'${NC}"; exit 1; }
+    echo -e "${GREEN}Poetry wurde erfolgreich installiert.${NC}"
+else
+    echo -e "${GREEN}Poetry ist bereits auf Ihrem Host installiert.${NC}"
+fi
+
+echo "Generiere poetry.lock..."
+poetry lock
+if [ $? -ne 0 ]; then
+    echo -e "${RED}Fehler beim Generieren der poetry.lock Datei. Überprüfen Sie Ihre Poetry-Installation und pyproject.toml.${NC}"
+    exit 1
+fi
+echo "poetry.lock erfolgreich generiert."
+echo ""
+
 # --- 3. Ordnerstruktur und __init__.py anpassen ---
 echo -e "${YELLOW}Schritt 3: Ordnerstruktur und Python-Dateien anpassen...${NC}"
 OLD_PACKAGE_NAME="my_project_name"
@@ -134,48 +173,7 @@ MAIN_PY_CONTENT="import sys\n\ndef main() -> None:\n    print(\"Hello, world fro
 echo -e "$MAIN_PY_CONTENT" > "src/$PACKAGE_NAME/main.py"
 echo "src/$PACKAGE_NAME/main.py wurde erstellt/aktualisiert mit statischem Gruß."
 
-# --- 4. Mise Konfiguration und Installation ---
-echo -e "${YELLOW}Schritt 4: Mise-Konfiguration und Installation...${NC}"
-if command -v mise &> /dev/null; then
-    echo "Mise gefunden. Konfiguriere .mise.toml und installiere Tools..."
-
-    # Erstelle/Aktualisiere .mise.toml für zukünftige manuelle Nutzung (optional, aber gut)
-    echo "[tools]" > .mise.toml
-    echo "python = \"$PYTHON_VERSION\"" >> .mise.toml
-    echo "poetry = \"latest\"" >> .mise.toml
-    echo ".mise.toml erstellt/aktualisiert mit Python $PYTHON_VERSION und Poetry."
-
-    echo ""
-    echo -e "${GREEN}Mise installiert Python und Poetry...${NC}"
-    # Explizite Installation/Aktivierung der Tools im Skriptkontext
-    mise use python@$PYTHON_VERSION
-    if [ $? -ne 0 ]; then
-        echo -e "${RED}Fehler beim Installieren/Aktivieren von Python $PYTHON_VERSION mit mise.${NC}"
-        exit 1
-    fi
-
-    mise use poetry@latest
-    if [ $? -ne 0 ]; then
-        echo -e "${RED}Fehler beim Installieren/Aktivieren von Poetry mit mise.${NC}"
-        exit 1
-    fi
-
-    echo -e "${GREEN}Stellen Sie sicher, dass mise in Ihrer Shell aktiviert ist:${NC}"
-    echo "  eval \"\$(mise activate bash)\"  # Für Bash"
-    echo "  eval \"\$(mise activate zsh)\"   # Für Zsh"
-    echo "  (Fügen Sie dies zu Ihrer .bashrc oder .zshrc hinzu für automatische Aktivierung)"
-else
-    echo -e "${RED}Mise nicht gefunden. Bitte installieren Sie mise oder passen Sie das Skript an, um Poetry und Python manuell zu verwalten.${NC}"
-    echo "   (z.B. pip install poetry und eine manuelle Python-Installation)"
-    exit 1
-fi
-
-# --- 5. Poetry Abhängigkeiten installieren ---
-echo -e "${YELLOW}Schritt 5: Poetry-Abhängigkeiten werden über Docker installiert...${NC}"
-echo "Die Poetry-Abhängigkeiten werden später beim Bauen des Docker-Images installiert."
-echo ""
-
-# --- 5.5 Git-Initialisierung und erster Commit ---
+# --- 4. Git-Initialisierung und erster Commit ---
 echo -e "${YELLOW}Schritt 5.5: Git-Repository initialisieren und erster Commit...${NC}"
 if [ ! -d ".git" ]; then
     git init
@@ -199,7 +197,7 @@ else
 fi
 echo ""
 
-# --- 6. Docker Image bauen (VOR jeglichen 'just'-Befehlen, die es nutzen!) ---
+# --- 5. Docker Image bauen ---
 echo -e "${YELLOW}Schritt 7: Docker Development Image bauen...${NC}"
 echo "Starte den Build des Docker-Images (dies kann einen Moment dauern)..."
 if ! command -v just &> /dev/null; then
@@ -215,7 +213,7 @@ fi
 echo "Docker Development Image erfolgreich gebaut!"
 echo ""
 
-# --- 7. Pre-commit Hooks installieren (Host-seitig) ---
+# --- 6. Pre-commit Hooks installieren (Host-seitig) ---
 echo -e "${YELLOW}Schritt 7: Pre-commit Hooks installieren (Host-seitig und via Docker)...${NC}"
 # Installiere den Pre-commit Client auf dem Host, damit die Git-Hooks funktionieren
 echo "Installiere 'pre-commit' Tool auf dem Host (falls noch nicht vorhanden)..."
