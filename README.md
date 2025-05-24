@@ -149,5 +149,3 @@ make precommit
 ## 💬 Feedback oder Beiträge
 
 Pull Requests und Vorschläge sind willkommen! Du kannst dieses Template gerne forken und an deine Bedürfnisse anpassen.
-
-```
