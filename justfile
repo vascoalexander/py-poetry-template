@@ -2,7 +2,7 @@
 CONTAINER_IMAGE := "py-poetry-app:dev"
 SRC_DIR := `pwd`
 
-export PYTHON_VERSION;
+export PYTHON_VERSION
 
 PACKAGE_NAME := `basename $(find src -maxdepth 1 -mindepth 1 -type d ! -name "__pycache__")`
 
