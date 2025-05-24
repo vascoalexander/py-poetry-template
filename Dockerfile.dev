@@ -1,4 +1,6 @@
-FROM python:3.10-slim-buster
+ARG PYTHON_VERSION=3.13
+
+FROM python:${PYTHON_VERSION}-slim-buster
 
 # Setze Umgebungsvariablen für Poetry
 ENV POETRY_HOME="/opt/poetry" \

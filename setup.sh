@@ -116,7 +116,11 @@ if [ -d "src/$OLD_PACKAGE_NAME" ]; then
     mv "src/$OLD_PACKAGE_NAME" "src/$PACKAGE_NAME"
     echo "src/$OLD_PACKAGE_NAME in src/$PACKAGE_NAME umbenannt."
 else
-    echo "src/$OLD_PACKAGE_NAME nicht gefunden, überspringe Umbenennung."
+    echo -e "${YELLOW}Warnung: Alter Paketordner 'src/$OLD_PACKAGE_NAME' nicht gefunden. Überspringe Umbenennung.${NC}"
+    if [ ! -d "src/$PACKAGE_NAME" ]; then
+        echo -e "${RED}Fehler: Weder alter noch neuer Paketordner in 'src/' gefunden. Bitte manuell anlegen oder umbenennen.${NC}"
+        exit 1
+    fi
 fi
 
 # Erstelle oder aktualisiere __init__.py
@@ -196,9 +200,14 @@ fi
 echo ""
 
 # --- 6. Docker Image bauen (VOR jeglichen 'just'-Befehlen, die es nutzen!) ---
-echo -e "${YELLOW}Schritt 6: Docker Development Image bauen...${NC}"
+echo -e "${YELLOW}Schritt 7: Docker Development Image bauen...${NC}"
 echo "Starte den Build des Docker-Images (dies kann einen Moment dauern)..."
-just build
+if ! command -v just &> /dev/null; then
+    echo -e "${RED}Fehler: 'just' Befehl nicht gefunden. Bitte installieren Sie 'just' (z.B. brew install just / sudo apt install just).${NC}"
+    exit 1
+fi
+
+PYTHON_VERSION="$PYTHON_VERSION" just build
 if [ $? -ne 0 ]; then
     echo -e "${RED}Fehler beim Bauen des Docker-Images. Überprüfen Sie Ihr Dockerfile.dev und die 'just' Ausgabe.${NC}"
     exit 1
