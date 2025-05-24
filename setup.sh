@@ -167,18 +167,11 @@ else
 fi
 
 # --- 5. Poetry Abhängigkeiten installieren ---
-echo -e "${YELLOW}Schritt 5: Poetry-Abhängigkeiten initialisieren...${NC}"
+echo -e "${YELLOW}Schritt 5: Poetry-Abhängigkeiten werden über Docker installiert...${NC}"
+echo "Die Poetry-Abhängigkeiten werden später beim Bauen des Docker-Images installiert."
+echo ""
 
-# Poetry sollte jetzt im PATH sein, da es über mise aktiviert wurde
-echo "Installiere Poetry Projekt-Abhängigkeiten (inklusive dev-Abhängigkeiten)..."
-poetry install
-if [ $? -ne 0 ]; then
-    echo -e "${RED}Fehler beim Installieren der Poetry-Abhängigkeiten. Überprüfen Sie Ihre pyproject.toml.${NC}"
-    exit 1
-fi
-echo "Poetry-Abhängigkeiten installiert."
-
-# --- Neu: 5.5 Git-Initialisierung und erster Commit ---
+# --- 5.5 Git-Initialisierung und erster Commit ---
 echo -e "${YELLOW}Schritt 5.5: Git-Repository initialisieren und erster Commit...${NC}"
 if [ ! -d ".git" ]; then
     git init
@@ -202,29 +195,53 @@ else
 fi
 echo ""
 
-# --- 6. Pre-commit Hooks installieren ---
-echo -e "${YELLOW}Schritt 6: Pre-commit Hooks installieren...${NC}"
-echo "Installiere Pre-commit Hooks in das Git Repository..."
-poetry run pre-commit install
+# --- 6. Docker Image bauen (VOR jeglichen 'just'-Befehlen, die es nutzen!) ---
+echo -e "${YELLOW}Schritt 6: Docker Development Image bauen...${NC}"
+echo "Starte den Build des Docker-Images (dies kann einen Moment dauern)..."
+just build
 if [ $? -ne 0 ]; then
-    echo -e "${RED}Fehler beim Installieren der pre-commit Hooks. Überprüfen Sie Ihre .pre-commit-config.yaml.${NC}"
+    echo -e "${RED}Fehler beim Bauen des Docker-Images. Überprüfen Sie Ihr Dockerfile.dev und die 'just' Ausgabe.${NC}"
     exit 1
 fi
-echo "Pre-commit Hooks installiert."
-
+echo "Docker Development Image erfolgreich gebaut!"
 echo ""
+
+# --- 7. Pre-commit Hooks installieren (Host-seitig) ---
+echo -e "${YELLOW}Schritt 7: Pre-commit Hooks installieren (Host-seitig und via Docker)...${NC}"
+# Installiere den Pre-commit Client auf dem Host, damit die Git-Hooks funktionieren
+echo "Installiere 'pre-commit' Tool auf dem Host (falls noch nicht vorhanden)..."
+pip install pre-commit || { echo "Warnung: Konnte 'pre-commit' nicht auf dem Host installieren. Bitte manuell installieren: pip install pre-commit"; }
+
+echo "Installiere Pre-commit Hooks in das Git Repository (host-seitig)..."
+# Dieser Befehl installiert die Git-Hooks (.git/hooks/pre-commit)
+pre-commit install
+if [ $? -ne 0 ]; then
+    echo -e "${RED}Fehler beim Installieren der host-seitigen pre-commit Hooks.${NC}"
+    exit 1
+fi
+echo "Host-seitige Pre-commit Hooks installiert."
+
+# Optional: Führe einen ersten Lauf der pre-commit Hooks direkt nach der Installation aus
+# Dies stellt sicher, dass alle initialen Formatierungen und Checks angewendet werden
+echo "Führe erste Pre-commit Checks aus (dies kann Dateien ändern)..."
+# Hier rufen wir das 'just' Kommando auf, um die Checks IM CONTAINER auszuführen
+just pre-commit-run || { echo -e "${YELLOW}Warnung: Initialer 'pre-commit-run' über Docker fehlgeschlagen. Überprüfen Sie die Ausgabe.${NC}"; }
+echo "Initialer Pre-commit-Lauf abgeschlossen."
+echo ""
+
+# --- Abschließende Meldungen ---
 echo -e "${GREEN}--- Setup Abgeschlossen! ---${NC}"
 echo "Ihr Projekt '$PROJECT_NAME' ($PACKAGE_NAME) wurde erfolgreich eingerichtet."
-echo "Sie können jetzt mit der Entwicklung beginnen."
 echo ""
-echo "Um Ihre Umgebung zu aktivieren (falls Sie mise verwenden):"
-echo "  Stellen Sie sicher, dass 'eval \"\$(mise activate <your_shell>)\"' in Ihrer Shell-Konfiguration ist."
-echo "  Wechseln Sie in das Projektverzeichnis und die mise-Hooks sollten die Umgebung aktivieren."
-echo ""
-echo "Um Abhängigkeiten zu aktualisieren:"
-echo "  poetry update"
-echo ""
-echo "Um Tests auszuführen:"
-echo "  poetry run pytest"
+echo "Nächste Schritte:"
+echo "1. ${YELLOW}Öffnen Sie Ihr Projekt in Ihrem Code-Editor.${NC}"
+echo "2. ${YELLOW}Verwenden Sie 'just' für alle Entwicklungsaufgaben:${NC}"
+echo "   - just shell: Startet eine interaktive Shell im Development-Container."
+echo "   - just check: Führt Linting-Checks aus (Ruff)."
+echo "   - just format: Formatiert Ihren Code (Ruff)."
+echo "   - just test: Führt Tests aus (Pytest)."
+echo "   - just --list: Zeigt alle verfügbaren Befehle an."
+echo "3. ${YELLOW}Bitte beachten Sie, dass 'pre-commit' beim Committen automatisch läuft.${NC}"
+echo "   Falls es Fehler gibt, beheben Sie diese und committen Sie erneut."
 echo ""
 echo "Viel Spaß beim Codieren!"
