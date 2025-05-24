@@ -2,8 +2,6 @@
 CONTAINER_IMAGE := "py-poetry-app:dev"
 SRC_DIR := `pwd`
 
-PYTHON_VERSION ?= "3.13"
-
 PACKAGE_NAME := `basename $(find src -maxdepth 1 -mindepth 1 -type d ! -name "__pycache__")`
 
 # -- HELFER --
@@ -14,11 +12,11 @@ list:
 # -- DOCKER MANAGEMENT --
 
 build:
-    @echo "Building Docker development image: {{CONTAINER_IMAGE}} with Python {{PYTHON_VERSION}}..."
+    @echo "Building Docker development image: {{CONTAINER_IMAGE}} with Python ${PYTHON_VERSION}..."
     docker build \
         -f Dockerfile.dev \
         -t {{CONTAINER_IMAGE}} \
-        --build-arg PYTHON_VERSION="{{PYTHON_VERSION}}" \
+        --build-arg PYTHON_VERSION="${PYTHON_VERSION}" \
 
 # Löscht das Docker-Image
 clean-image:
