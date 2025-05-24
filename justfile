@@ -6,6 +6,7 @@ SRC_DIR := `pwd`
 PYTHON_VERSION := env_var("PYTHON_VERSION")
 PACKAGE_NAME := `basename $(find src -maxdepth 1 -mindepth 1 -type d ! -name "__pycache__")`
 CONTAINER_PATH := "/opt/poetry/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+CONTAINER_IMAGE := format("{}:dev", PACKAGE_NAME)
 
 # -- HELFER --
 # Zeigt alle verfügbaren Rezepte an
@@ -22,7 +23,6 @@ build:
         -f Dockerfile.dev \
         -t {{CONTAINER_IMAGE}} \
         --build-arg PYTHON_VERSION="{{PYTHON_VERSION}}" \
-        --no-cache \
         .
 
 # Löscht das Docker-Image
@@ -39,34 +39,6 @@ shell: build
         -v {{SRC_DIR}}:/app \
         {{CONTAINER_IMAGE}} \
         bash
-
-# Erweiterte Debug-Shell für pre-commit und Git
-# Übergibt den sauberen PATH explizit an docker run
-debug-pre-commit: build
-    @echo "Starting debug shell in container for pre-commit issues..."
-    docker run -it --rm \
-        -e PATH="{{CONTAINER_PATH}}" \
-        -v {{SRC_DIR}}:/app \
-        {{CONTAINER_IMAGE}} \
-        bash -c " \
-            echo '--- CURRENT CONTAINER PATH ---'; \
-            echo \$PATH; \
-            cd /app; \
-            echo '--- Git Version ---'; \
-            git --version; \
-            echo '--- Git Status in /app ---'; \
-            git status; \
-            echo '--- Git is-inside-work-tree ---'; \
-            git rev-parse --is-inside-work-tree; \
-            echo '--- LS .git ---'; \
-            ls -la .git; \
-            echo '--- Pre-commit Cache Clean ---'; \
-            poetry run pre-commit clean; \
-            echo '--- Running pre-commit with verbose output ---'; \
-            poetry run pre-commit run --all-files --verbose; \
-            echo '--- Starting interactive shell ---'; \
-            bash \
-        "
 
 # Linting-Checks
 # Übergibt den sauberen PATH explizit an docker run
