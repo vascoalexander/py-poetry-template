@@ -6,7 +6,7 @@ SRC_DIR := `pwd`
 PYTHON_VERSION := env_var("PYTHON_VERSION")
 PACKAGE_NAME := `basename $(find src -maxdepth 1 -mindepth 1 -type d ! -name "__pycache__")`
 CONTAINER_PATH := "/opt/poetry/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-CONTAINER_IMAGE := format("{}:dev", PACKAGE_NAME)
+CONTAINER_IMAGE := PACKAGE_NAME + ":dev"
 
 # -- HELFER --
 # Zeigt alle verfügbaren Rezepte an
