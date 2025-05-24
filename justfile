@@ -5,6 +5,7 @@ CONTAINER_IMAGE := "py-poetry-app:dev"
 SRC_DIR := `pwd`
 PYTHON_VERSION := env_var("PYTHON_VERSION")
 PACKAGE_NAME := `basename $(find src -maxdepth 1 -mindepth 1 -type d ! -name "__pycache__")`
+CONTAINER_PATH := "/opt/poetry/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
 # -- HELFER --
 # Zeigt alle verfügbaren Rezepte an
@@ -27,64 +28,92 @@ build:
 # Löscht das Docker-Image
 clean-image:
     @echo "Removing Docker image: {{CONTAINER_IMAGE}}"
-    docker rmi {{CONTAINER_IMAGE}} || true # '|| true' verhindert Fehler, wenn Image nicht existiert
+    docker rmi {{CONTAINER_IMAGE}} || true
 
 # Startet eine interaktive Shell im Development-Container
-# Dein lokaler Code wird unter /app gemountet.
+# Übergibt den sauberen PATH explizit an docker run
 shell: build
     @echo "Starting interactive shell in development container..."
     docker run -it --rm \
+        -e PATH="{{CONTAINER_PATH}}" \ # <--- HIER HINZUFÜGEN
         -v {{SRC_DIR}}:/app \
         {{CONTAINER_IMAGE}} \
         bash
 
-# -- PROJEKT-SPEZIFISCHE AUFGABEN (IM CONTAINER AUSGEFÜHRT) --
+# Erweiterte Debug-Shell für pre-commit und Git
+# Übergibt den sauberen PATH explizit an docker run
+debug-pre-commit: build
+    @echo "Starting debug shell in container for pre-commit issues..."
+    docker run -it --rm \
+        -e PATH="{{CONTAINER_PATH}}" \ # <--- HIER HINZUFÜGEN
+        -v {{SRC_DIR}}:/app \
+        {{CONTAINER_IMAGE}} \
+        bash -c " \
+            echo '--- CURRENT CONTAINER PATH ---'; \
+            echo \$PATH; \
+            cd /app; \
+            echo '--- Git Version ---'; \
+            git --version; \
+            echo '--- Git Status in /app ---'; \
+            git status; \
+            echo '--- Git is-inside-work-tree ---'; \
+            git rev-parse --is-inside-work-tree; \
+            echo '--- LS .git ---'; \
+            ls -la .git; \
+            echo '--- Pre-commit Cache Clean ---'; \
+            poetry run pre-commit clean; \
+            echo '--- Running pre-commit with verbose output ---'; \
+            poetry run pre-commit run --all-files --verbose; \
+            echo '--- Starting interactive shell ---'; \
+            bash \
+        "
 
-# Führt den Ruff Linter/Formatter im Container aus
+# Linting-Checks
+# Übergibt den sauberen PATH explizit an docker run
 check: build
-    @echo "Running Ruff checks in container..."
+    @echo "Running linting checks..."
     docker run --rm \
+        -e PATH="{{CONTAINER_PATH}}" \ # <--- HIER HINZUFÜGEN
         -v {{SRC_DIR}}:/app \
         {{CONTAINER_IMAGE}} \
-        poetry run ruff check .
+        poetry run ruff check /app/src /app/tests
 
-# Führt den Ruff Formatter im Container aus
+# Code formatieren
+# Übergibt den sauberen PATH explizit an docker run
 format: build
-    @echo "Running Ruff formatter in container..."
+    @echo "Formatting code..."
     docker run --rm \
+        -e PATH="{{CONTAINER_PATH}}" \ # <--- HIER HINZUFÜGEN
         -v {{SRC_DIR}}:/app \
         {{CONTAINER_IMAGE}} \
-        poetry run ruff format .
+        poetry run ruff format /app/src /app/tests
 
-# Führt die Pytest Tests im Container aus
+# Tests ausführen
+# Übergibt den sauberen PATH explizit an docker run
 test: build
-    @echo "Running Pytest tests in container..."
+    @echo "Running tests..."
     docker run --rm \
+        -e PATH="{{CONTAINER_PATH}}" \ # <--- HIER HINZUFÜGEN
         -v {{SRC_DIR}}:/app \
         {{CONTAINER_IMAGE}} \
-        poetry run pytest
+        poetry run pytest /app/tests
 
-# Führt pre-commit Hooks aus.
+# Führt pre-commit Hooks manuell im Container aus
+# Übergibt den sauberen PATH explizit an docker run
 pre-commit-run: build
     @echo "Running pre-commit hooks in container..."
     docker run --rm \
+        -e PATH="{{CONTAINER_PATH}}" \ # <--- HIER HINZUFÜGEN
         -v {{SRC_DIR}}:/app \
         {{CONTAINER_IMAGE}} \
         poetry run pre-commit run --all-files
 
-# Beispiel: Projekt starten (wenn es eine ausführbare Komponente hat)
-# Ersetze <package> durch den tatsächlichen Namen deines Python-Pakets, z.B. "my_app"
+# Startet die Anwendung (beispielhaft)
+# Übergibt den sauberen PATH explizit an docker run
 run: build
-    @echo "Running main application ({{PACKAGE_NAME}}) in container..."
+    @echo "Running the application..."
     docker run --rm \
+        -e PATH="{{CONTAINER_PATH}}" \ # <--- HIER HINZUFÜGEN
         -v {{SRC_DIR}}:/app \
         {{CONTAINER_IMAGE}} \
-        poetry run python src/{{PACKAGE_NAME}}/main.py
-
-# NEU: Debug-Shell, um Git zu testen
-debug-git-shell: build
-    @echo "Starting debug shell in container to test Git..."
-    docker run -it --rm \
-        -v {{SRC_DIR}}:/app \
-        {{CONTAINER_IMAGE}} \
-        bash -c "git --version; echo '--- PATH ---'; echo $PATH; echo '--- LS .git ---'; ls -la /app/.git; bash"
+        poetry run python /app/src/{{PACKAGE_NAME}}/main.py
