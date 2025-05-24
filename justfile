@@ -19,8 +19,7 @@ build:
         -f Dockerfile.dev \
         -t {{CONTAINER_IMAGE}} \
         --build-arg PYTHON_VERSION="${PYTHON_VERSION}" \
-        . 
-          # docker build -f Dockerfile.dev -t {{CONTAINER_IMAGE}} --build-arg PYTHON_VERSION="${PYTHON_VERSION}" .
+        .
 
 # Löscht das Docker-Image
 clean-image:
