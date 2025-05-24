@@ -12,6 +12,8 @@ ENV POETRY_HOME="/opt/poetry" \
 
 RUN pip install poetry
 
+ENV PATH="$POETRY_HOME/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
 WORKDIR /app
 
 COPY pyproject.toml poetry.lock ./
