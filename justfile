@@ -13,10 +13,14 @@ list:
 
 build:
     @echo "Building Docker development image: {{CONTAINER_IMAGE}} with Python ${PYTHON_VERSION}..."
+    # Die Änderungen hier sind, dass der Punkt als letztes Argument direkt auf der gleichen Zeile
+    # oder mit einem korrekten Zeilenumbruch mit Backslash steht.
     docker build \
         -f Dockerfile.dev \
         -t {{CONTAINER_IMAGE}} \
         --build-arg PYTHON_VERSION="${PYTHON_VERSION}" \
+        . 
+          # docker build -f Dockerfile.dev -t {{CONTAINER_IMAGE}} --build-arg PYTHON_VERSION="${PYTHON_VERSION}" .
 
 # Löscht das Docker-Image
 clean-image:
