@@ -1,5 +1,5 @@
 # Variablen für den Docker-Container
-set dotenv-load;
+set dotenv-load
 
 CONTAINER_IMAGE := "py-poetry-app:dev"
 SRC_DIR := `pwd`
