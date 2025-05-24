@@ -5,6 +5,14 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
+# --- Defaultwerte ---
+DEFAULT_PROJECT_DESCRIPTION="A new Python project."
+DEFAULT_AUTHOR_NAME="Your Name"
+DEFAULT_AUTHOR_EMAIL="you@example.com"
+DEFAULT_PYTHON_VERSION="3.12"
+MIN_PYTHON_MAJOR=3
+MIN_PYTHON_MINOR=9
+
 echo -e "${GREEN}--- Python Project Setup ---${NC}"
 echo "Dieses Skript hilft Ihnen, Ihr neues Python-Projekt einzurichten."
 echo ""
@@ -48,24 +56,23 @@ if [ "$PROJECT_NAME" != "$PACKAGE_NAME" ]; then
 fi
 
 # Beschreibung
-read -p "Geben Sie eine kurze Beschreibung Ihres Projekts ein: " PROJECT_DESCRIPTION
-PROJECT_DESCRIPTION=${PROJECT_DESCRIPTION:-"A new Python project."} # Standardwert
+read -p "Geben Sie eine kurze Beschreibung Ihres Projekts ein [${DEFAULT_PROJECT_DESCRIPTION}]: " PROJECT_DESCRIPTION
+PROJECT_DESCRIPTION=${PROJECT_DESCRIPTION:-$DEFAULT_PROJECT_DESCRIPTION}
 
 # Autor
-read -p "Geben Sie Ihren Namen ein (z.B. Max Mustermann): " AUTHOR_NAME
-AUTHOR_NAME=${AUTHOR_NAME:-"Your Name"}
+read -p "Geben Sie Ihren Namen ein [${DEFAULT_AUTHOR_NAME}]: " AUTHOR_NAME
+AUTHOR_NAME=${AUTHOR_NAME:-$DEFAULT_AUTHOR_NAME}
 
 # Email
-read -p "Geben Sie Ihre E-Mail-Adresse ein (z.g. max@example.com): " AUTHOR_EMAIL
-AUTHOR_EMAIL=${AUTHOR_EMAIL:-"you@example.com"}
+read -p "Geben Sie Ihre E-Mail-Adresse ein [${DEFAULT_AUTHOR_EMAIL}]: " AUTHOR_EMAIL
+AUTHOR_EMAIL=${AUTHOR_EMAIL:-$DEFAULT_AUTHOR_EMAIL}
 
 # Python-Version
-MIN_PYTHON_MAJOR=3
-MIN_PYTHON_MINOR=9
 PYTHON_VERSION_VALID=false
 
 while [ "$PYTHON_VERSION_VALID" = false ]; do
-    read -p "Geben Sie die gewünschte Python-Version an (mindestens ${MIN_PYTHON_MAJOR}.${MIN_PYTHON_MINOR}, z.B. 3.10, 3.11, 3.12, 3.13): " PYTHON_VERSION
+    read -p "Geben Sie die gewünschte Python-Version an (mindestens ${MIN_PYTHON_MAJOR}.${MIN_PYTHON_MINOR}) [${DEFAULT_PYTHON_VERSION}]: " PYTHON_VERSION
+    PYTHON_VERSION=${PYTHON_VERSION:-$DEFAULT_PYTHON_VERSION}
 
     # Extrahiere Major- und Minor-Version
     # Trennen des Strings bei '.'
@@ -118,26 +125,10 @@ mkdir -p "src/$PACKAGE_NAME"
 echo -e "$INIT_PY_CONTENT" > "src/$PACKAGE_NAME/__init__.py"
 echo "src/$PACKAGE_NAME/__init__.py wurde erstellt/aktualisiert."
 
-
 # main.py aktualisieren
 MAIN_PY_CONTENT="import sys\n\ndef main() -> None:\n    print(\"Hello, world from your new Python project!\")\n    print(f\"Python version: {sys.version}\")\n\nif __name__ == '__main__':\n    main()\n"
 echo -e "$MAIN_PY_CONTENT" > "src/$PACKAGE_NAME/main.py"
 echo "src/$PACKAGE_NAME/main.py wurde erstellt/aktualisiert mit statischem Gruß."
-
-# --- NEU: test_main.py Import anpassen (Inhalt bleibt statisch) ---
-echo -e "${YELLOW}Schritt 3.5: Tests anpassen...${NC}"
-TEST_FILE="tests/test_main.py"
-if [ -f "$TEST_FILE" ]; then
-    # Das Suchmuster muss "from $OLD_PACKAGE_NAME.main" finden
-    # und ersetzen durch "from $PACKAGE_NAME.main"
-    # Wichtig: KEIN "src." im Suchmuster, da es im Template-Test nicht vorhanden sein sollte.
-    sed -i.bak "s/from $OLD_PACKAGE_NAME\.main/from $PACKAGE_NAME\.main/" "$TEST_FILE"
-    rm -f "${TEST_FILE}.bak" # Backup-Datei entfernen
-    echo "$TEST_FILE wurde aktualisiert (Importpfad)."
-else
-    echo "Warnung: $TEST_FILE nicht gefunden. Tests könnten nicht korrekt funktionieren."
-fi
-echo "" # Eine Leerzeile für Lesbarkeit
 
 # --- 4. Mise Konfiguration und Installation ---
 echo -e "${YELLOW}Schritt 4: Mise-Konfiguration und Installation...${NC}"
