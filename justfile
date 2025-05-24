@@ -3,7 +3,7 @@ set dotenv-load
 
 CONTAINER_IMAGE := "py-poetry-app:dev"
 SRC_DIR := `pwd`
-
+PYTHON_VERSION := env_var("PYTHON_VERSION", "3.12")
 PACKAGE_NAME := `basename $(find src -maxdepth 1 -mindepth 1 -type d ! -name "__pycache__")`
 
 # -- HELFER --
