@@ -80,3 +80,11 @@ run: build
         -v {{SRC_DIR}}:/app \
         {{CONTAINER_IMAGE}} \
         poetry run python src/{{PACKAGE_NAME}}/main.py
+
+# NEU: Debug-Shell, um Git zu testen
+debug-git-shell: build
+    @echo "Starting debug shell in container to test Git..."
+    docker run -it --rm \
+        -v {{SRC_DIR}}:/app \
+        {{CONTAINER_IMAGE}} \
+        bash -c "git --version; echo '--- PATH ---'; echo $PATH; echo '--- LS .git ---'; ls -la /app/.git; bash"
