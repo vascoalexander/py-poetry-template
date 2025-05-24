@@ -12,16 +12,9 @@ repos:
       - id: check-json
       - id: check-toml
 
-  # Ruff (Formatter, Linter, Import-Sortierung)
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.4.8
+  - repo: local
     hooks:
-      - id: ruff
-      - id: ruff-format
-
-  # Mypy (Type Checking)
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.15.0
-    hooks:
-      - id: mypy
-        files: ^src/.*\.py$
+      - id: make-check
+        name: Run make check
+        entry: make check
+        language: system
