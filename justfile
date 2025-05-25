@@ -96,7 +96,7 @@ coverage: build
 # HTML Coverage Report generieren und direkt auf den Host speichern
 coverage-html: build
     @echo "Generating HTML coverage report..."
-    # Sicherstellen, dass der Host-Zielordner existiert
+    # Sicherstellen, dass der Host-Zielordner existiert (optional, aber gute Praxis)
     @mkdir -p coverage_reports/htmlcov
 
     docker run --rm \
@@ -105,8 +105,11 @@ coverage-html: build
         -v $(pwd)/coverage_reports/htmlcov:/app/htmlcov \
         {{CONTAINER_IMAGE}} \
         bash -c "\
+            # Sicherstellen, dass der /app/htmlcov Ordner appuser gehört, bevor pytest ihn füllt.
+            # Ausführung als root, um sicherzustellen, dass der chown klappt.
+            # Dann Wechsel zu appuser zum Erstellen des Ordners und Ausführen von pytest.
             chown -R {{HOST_UID}}:{{HOST_GID}} /app/htmlcov && \
-            su - appuser -c 'poetry run pytest --cov=src --cov-report=html:/app/htmlcov' \
+            su -c 'mkdir -p /app/htmlcov && poetry run pytest --cov=src --cov-report=html:/app/htmlcov' {{HOST_UID}} \
         "
 
     @echo "HTML coverage report generated in coverage_reports/htmlcov/ (on your host)."
