@@ -96,11 +96,12 @@ coverage: build
 # HTML Coverage Report generieren und direkt auf den Host speichern
 coverage-html: build
     @echo "Generating HTML coverage report..."
-    # Sicherstellen, dass der Host-Zielordner existiert
+    # Sicherstellen, dass der Host-Zielordner existiert (optional, da Docker es sonst erstellt)
     @mkdir -p coverage_reports/htmlcov
 
     docker run --rm \
         -e PATH="{{CONTAINER_PATH}}" \
+        -u root \
         -v {{SRC_DIR}}:/app \
         -v $(pwd)/coverage_reports/htmlcov:/app/htmlcov \
         {{CONTAINER_IMAGE}} \
