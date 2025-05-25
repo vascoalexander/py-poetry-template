@@ -16,7 +16,7 @@ ENV POETRY_HOME="/opt/poetry" \
 
 RUN pip install poetry
 
-RUN chown -R appuser:appuser "${POETRY_HOME}"
+RUN chown -R appuser:appuser /opt/poetry
 
 WORKDIR /app
 
