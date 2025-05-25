@@ -13,8 +13,6 @@ RUN apt-get update \
 RUN git config --global --add safe.directory /app
 
 # Erstelle den Nicht-Root-Benutzer 'appuser'
-# NEU: Entferne --create-home, da adduser auf Debian-basierten Systemen dies nicht kennt.
-# --home /home/appuser sollte das Verzeichnis standardmäßig erstellen.
 RUN adduser --system --group --uid 1000 --shell /bin/bash --home /home/appuser appuser
 
 # Setze Umgebungsvariablen für Poetry. POETRY_HOME wird hier verwendet,
@@ -28,9 +26,6 @@ ENV PATH="${POETRY_HOME}/bin:${PATH}"
 
 # Installiere Poetry als root in das definierte POETRY_HOME
 RUN curl -sSL https://install.python-poetry.org | python3 - --version 1.8.3
-
-# Überprüfe, ob /opt/poetry tatsächlich existiert nach der Installation (Debug-Schritt)
-RUN test -d "${POETRY_HOME}" || (echo "ERROR: ${POETRY_HOME} was not created by Poetry installation!" && exit 1)
 
 # Ändere den Besitzer des Poetry-Installationsverzeichnisses zu appuser.
 RUN chown -R appuser:appuser "${POETRY_HOME}"
@@ -54,5 +49,4 @@ COPY pyproject.toml poetry.lock ./
 # Installiere die Projekt-Abhängigkeiten (Produktion und Entwicklung)
 RUN poetry install --no-root --sync --with dev
 
-# Standardbefehl beim Starten des Containers
 CMD ["bash"]
