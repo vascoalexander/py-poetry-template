@@ -13,7 +13,8 @@ RUN apt-get update \
 RUN git config --global --add safe.directory /app
 
 # Erstelle den Nicht-Root-Benutzer 'appuser'
-RUN adduser --system --group --uid 1000 --shell /bin/bash appuser
+# NEU: Erstelle das Home-Verzeichnis für appuser explizit
+RUN adduser --system --group --uid 1000 --shell /bin/bash --home /home/appuser --create-home appuser
 
 # Setze Umgebungsvariablen für Poetry. POETRY_HOME wird hier verwendet,
 # um den Installationspfad festzulegen.
@@ -21,32 +22,30 @@ ENV POETRY_HOME="/opt/poetry" \
     POETRY_VIRTUALENVS_IN_PROJECT=false \
     POETRY_NO_INTERACTION=1
 
+# Definiere den PATH für den Container, um die Poetry-Binaries zu finden
+ENV PATH="${POETRY_HOME}/bin:${PATH}"
+
 # Installiere Poetry als root in das definierte POETRY_HOME
-# Curl benötigt Schreibrechte für den Download, Python für die Installation.
-# Dieses Skript sollte den Ordner /opt/poetry selbst erstellen, wenn es nicht existiert.
 RUN curl -sSL https://install.python-poetry.org | python3 - --version 1.8.3
 
-# NEU: Überprüfe, ob /opt/poetry tatsächlich existiert nach der Installation (Debug-Schritt)
-# Wenn dieser Befehl fehlschlägt, dann hat Poetry nicht dorthin installiert.
+# Überprüfe, ob /opt/poetry tatsächlich existiert nach der Installation (Debug-Schritt)
 RUN test -d "${POETRY_HOME}" || (echo "ERROR: ${POETRY_HOME} was not created by Poetry installation!" && exit 1)
 
 # Ändere den Besitzer des Poetry-Installationsverzeichnisses zu appuser.
-# Dies ist entscheidend, damit der appuser später Poetry nutzen kann.
-# Hier muss /opt/poetry definitiv existieren.
 RUN chown -R appuser:appuser "${POETRY_HOME}"
-
-# Definiere den PATH für den Container, um die Poetry-Binaries zu finden
-ENV PATH="${POETRY_HOME}/bin:${PATH}"
 
 # Setze das Arbeitsverzeichnis für das Projekt
 WORKDIR /app
 
 # Stelle sicher, dass der appuser Schreibrechte im Arbeitsverzeichnis hat.
-# Wichtig, falls /app nicht gemountet wird oder für Caches innerhalb des Containers.
 RUN chown -R appuser:appuser /app
 
 # Wechsle zum Nicht-Root-Benutzer für nachfolgende Befehle und zur Laufzeit
 USER appuser
+
+# WICHTIG: Setze die HOME-Umgebungsvariable für den appuser.
+# Poetry und andere Tools erwarten, dass HOME auf ein beschreibbares Verzeichnis zeigt.
+ENV HOME="/home/appuser"
 
 # Kopiere die Poetry-Konfigurationsdateien, um den Docker-Layer-Cache zu optimieren
 COPY pyproject.toml poetry.lock ./
