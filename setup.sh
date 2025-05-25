@@ -129,15 +129,12 @@ if ! command -v poetry &> /dev/null; then
         # wenn pipx ansonsten Probleme mit dem System-Python hat.
         python3 -m pip install --user pipx || { echo -e "${RED}Fehler: Konnte pipx nicht installieren. Bitte installieren Sie pipx manuell (z.B. 'pip install --user pipx') und versuchen Sie es erneut.${NC}"; exit 1; }
         python3 -m pipx ensurepath || { echo -e "${RED}Fehler: Konnte pipx Pfad nicht zur PATH-Umgebungsvariable hinzufügen. Bitte prüfen Sie Ihre Installation.${NC}"; }
-        # Ein Hinweis, dass der Benutzer das Terminal neu starten muss, ist hier wichtig,
-        # da 'source' in einem Subshell-Skript nicht dauerhaft wirkt.
+        # Hinweis, dass der Benutzer das Terminal ggfs neu starten muss
         echo -e "${YELLOW}Hinweis: Möglicherweise müssen Sie dieses Terminal schließen und ein neues öffnen, damit 'pipx' und 'poetry' im PATH verfügbar sind.${NC}"
         echo -e "${GREEN}pipx wurde installiert und zum PATH hinzugefügt.${NC}"
     fi
 
     # Installiere Poetry mit pipx
-    # Hier könnte auch ein `|| true` stehen, wenn wir den Fehler nicht fatal machen wollen,
-    # aber ein Fehler hier bedeutet meist, dass nichts weiter funktionieren würde.
     pipx install poetry || { echo -e "${RED}Fehler: Konnte Poetry nicht mit pipx installieren. Bitte versuchen Sie es manuell: 'pipx install poetry'${NC}"; exit 1; }
     echo -e "${GREEN}Poetry wurde erfolgreich installiert.${NC}"
 else

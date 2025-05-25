@@ -12,12 +12,9 @@ CONTAINER_IMAGE := PACKAGE_NAME + ":dev"
 list:
     @just --list
 
-# -- DOCKER MANAGEMENT --
-
+# Build Docker Image
 build:
     @echo "Building Docker development image: {{CONTAINER_IMAGE}} with Python ${PYTHON_VERSION}..."
-    # Die Änderungen hier sind, dass der Punkt als letztes Argument direkt auf der gleichen Zeile
-    # oder mit einem korrekten Zeilenumbruch mit Backslash steht.
     docker build \
         -f Dockerfile.dev \
         -t {{CONTAINER_IMAGE}} \
@@ -25,12 +22,11 @@ build:
         .
 
 # Löscht das Docker-Image
-clean-image:
+clean:
     @echo "Removing Docker image: {{CONTAINER_IMAGE}}"
     docker rmi {{CONTAINER_IMAGE}} || true
 
 # Startet eine interaktive Shell im Development-Container
-# Übergibt den sauberen PATH explizit an docker run
 shell: build
     @echo "Starting interactive shell in development container..."
     docker run -it --rm \
@@ -40,7 +36,6 @@ shell: build
         bash
 
 # Linting-Checks
-# Übergibt den sauberen PATH explizit an docker run
 check: build
     @echo "Running linting checks..."
     docker run --rm \
@@ -50,7 +45,6 @@ check: build
         poetry run ruff check /app/src /app/tests
 
 # Code formatieren
-# Übergibt den sauberen PATH explizit an docker run
 format: build
     @echo "Formatting code..."
     docker run --rm \
@@ -60,7 +54,6 @@ format: build
         poetry run ruff format /app/src /app/tests
 
 # Tests ausführen
-# Übergibt den sauberen PATH explizit an docker run
 test: build
     @echo "Running tests..."
     docker run --rm \
@@ -70,8 +63,7 @@ test: build
         poetry run pytest /app/tests
 
 # Führt pre-commit Hooks manuell im Container aus
-# Übergibt den sauberen PATH explizit an docker run
-pre-commit-run: build
+pre-commit: build
     @echo "Running pre-commit hooks in container..."
     docker run --rm \
         -e PATH="{{CONTAINER_PATH}}" \
@@ -79,8 +71,7 @@ pre-commit-run: build
         {{CONTAINER_IMAGE}} \
         poetry run pre-commit run --all-files
 
-# Startet die Anwendung (beispielhaft)
-# Übergibt den sauberen PATH explizit an docker run
+# Startet die Anwendung
 run: build
     @echo "Running the application..."
     docker run --rm \
