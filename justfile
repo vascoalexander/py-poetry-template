@@ -1,59 +1,56 @@
-# Variablen für den Docker-Container
 set dotenv-load
 
+# Dynamische Variablen
 SRC_DIR := `pwd`
 PYTHON_VERSION := env_var("PYTHON_VERSION")
 PACKAGE_NAME := `basename $(find src -maxdepth 1 -mindepth 1 -type d ! -name "__pycache__")`
-CONTAINER_PATH := "/opt/poetry/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-CONTAINER_IMAGE := PACKAGE_NAME + ":dev"
+CONTAINER_IMAGE := "{{PACKAGE_NAME}}:dev"
 HOST_UID := `id -u`
 HOST_GID := `id -g`
 
-# -- HELFER --
-# Zeigt alle verfügbaren Rezepte an
+# Listet alle verfügbaren Befehle
 list:
     @just --list
 
-# Build Docker Image
+# Docker-Image bauen mit User-Mapping
 build:
-    @echo "Building Docker development image: {{CONTAINER_IMAGE}} with Python ${PYTHON_VERSION}..."
+    @echo "Building image: {{CONTAINER_IMAGE}} with Python {{PYTHON_VERSION}} and UID {{HOST_UID}}..."
     docker build \
         -f Dockerfile.dev \
         -t {{CONTAINER_IMAGE}} \
         --build-arg PYTHON_VERSION="{{PYTHON_VERSION}}" \
+        --build-arg USER_UID={{HOST_UID}} \
+        --build-arg USER_GID={{HOST_GID}} \
         .
 
-# Löscht das Docker-Image
+# Image entfernen
 clean:
-    @echo "Removing Docker image: {{CONTAINER_IMAGE}}"
     docker rmi {{CONTAINER_IMAGE}} || true
 
-# Startet eine interaktive Shell im Development-Container
+# Shell starten
 shell: build
-    @echo "Starting interactive shell in development container..."
     docker run -it --rm \
-        -e PATH="{{CONTAINER_PATH}}" \
-        -u {{HOST_UID}}:{{HOST_GID}} \
         -v {{SRC_DIR}}:/app \
         {{CONTAINER_IMAGE}} \
         bash
 
-# Linting-Checks
-lint: build
-    @echo "Running linting checks..."
+# Formatierung
+format: build
     docker run --rm \
-        -e PATH="{{CONTAINER_PATH}}" \
-        -u {{HOST_UID}}:{{HOST_GID}} \
         -v {{SRC_DIR}}:/app \
         {{CONTAINER_IMAGE}} \
-        poetry run ruff check /app/src /app/tests
+        poetry run ruff format src tests
 
-# Checks: Formatierung, Linting, Type-Checking, Tests
-check: build
-    @echo "Running all checks: Formatting, Linting, Type Checking, Tests..."
+# Linting
+lint: build
     docker run --rm \
-        -e PATH="{{CONTAINER_PATH}}" \
-        -u {{HOST_UID}}:{{HOST_GID}} \
+        -v {{SRC_DIR}}:/app \
+        {{CONTAINER_IMAGE}} \
+        poetry run ruff check src tests
+
+# Typprüfung & Tests
+check: build
+    docker run --rm \
         -v {{SRC_DIR}}:/app \
         {{CONTAINER_IMAGE}} \
         bash -c " \
@@ -63,72 +60,42 @@ check: build
             poetry run pytest src tests \
         "
 
-# Code formatieren
-format: build
-    @echo "Formatting code..."
-    docker run --rm \
-        -e PATH="{{CONTAINER_PATH}}" \
-        -u {{HOST_UID}}:{{HOST_GID}} \
-        -v {{SRC_DIR}}:/app \
-        {{CONTAINER_IMAGE}} \
-        poetry run ruff format /app/src /app/tests
-
-# Tests ausführen
+# Tests
 test: build
-    @echo "Running tests..."
     docker run --rm \
-        -e PATH="{{CONTAINER_PATH}}" \
-        -u {{HOST_UID}}:{{HOST_GID}} \
         -v {{SRC_DIR}}:/app \
         {{CONTAINER_IMAGE}} \
-        poetry run pytest /app/tests
+        poetry run pytest tests
 
-# Test Coverage
+# Coverage
 coverage: build
-    @echo "Running pytest coverage..."
     docker run --rm \
-        -e PATH="{{CONTAINER_PATH}}" \
-        -u {{HOST_UID}}:{{HOST_GID}} \
         -v {{SRC_DIR}}:/app \
         {{CONTAINER_IMAGE}} \
         poetry run pytest --cov=src --cov-report=term-missing
 
-# HTML Coverage Report generieren und direkt auf den Host speichern
+# Coverage HTML
 coverage-html: build
-    @echo "Generating HTML coverage report..."
-    # Sicherstellen, dass der Host-Zielordner existiert (optional, da Docker es sonst erstellt)
     @mkdir -p coverage_reports/htmlcov
 
     docker run --rm \
-        -e PATH="{{CONTAINER_PATH}}" \
-        -u root \
         -v {{SRC_DIR}}:/app \
         -v $(pwd)/coverage_reports/htmlcov:/app/htmlcov \
         {{CONTAINER_IMAGE}} \
-        bash -c "\
-            chown -R {{HOST_UID}}:{{HOST_GID}} /app/htmlcov && \
-            gosu appuser bash -c 'mkdir -p /app/htmlcov && poetry run pytest --cov=src --cov-report=html:/app/htmlcov' \
-        "
+        poetry run pytest --cov=src --cov-report=html:/app/htmlcov
 
-    @echo "HTML coverage report generated in coverage_reports/htmlcov/ (on your host)."
-    @echo "You can open coverage_reports/htmlcov/index.html in your browser."
+    @echo "HTML coverage report in coverage_reports/htmlcov/index.html"
 
-# Führt pre-commit Hooks manuell im Container aus
+# Pre-commit Hooks
 pre-commit: build
-    @echo "Running pre-commit hooks in container..."
     docker run --rm \
-        -e PATH="{{CONTAINER_PATH}}" \
-        -u {{HOST_UID}}:{{HOST_GID}} \
         -v {{SRC_DIR}}:/app \
         {{CONTAINER_IMAGE}} \
         poetry run pre-commit run --all-files
 
-# Startet die Anwendung
+# App starten
 run: build
-    @echo "Running the application..."
     docker run --rm \
-        -e PATH="{{CONTAINER_PATH}}" \
-        -u {{HOST_UID}}:{{HOST_GID}} \
         -v {{SRC_DIR}}:/app \
         {{CONTAINER_IMAGE}} \
-        poetry run python /app/src/{{PACKAGE_NAME}}/main.py
+        poetry run python src/{{PACKAGE_NAME}}/main.py

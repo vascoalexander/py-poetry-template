@@ -1,52 +1,47 @@
 # Dockerfile.dev
 
 ARG PYTHON_VERSION=3.12
-
 FROM python:${PYTHON_VERSION}-slim-bookworm
 
-# Systemaktualisierung und Git-Installation
+# Build-Args für User-Mapping
+ARG USERNAME=appuser
+ARG USER_UID=1000
+ARG USER_GID=1000
+
+# System-Tools
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends git curl gosu \
+    && apt-get install -y --no-install-recommends \
+        git curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Konfiguriere Git, um das /app-Verzeichnis als sicher zu betrachten.
+# Git: /app als sicher markieren
 RUN git config --global --add safe.directory /app
 
-# Erstelle den Nicht-Root-Benutzer 'appuser'
-RUN adduser --system --group --uid 1000 --shell /bin/bash --home /home/appuser appuser
+# User anlegen
+RUN groupadd --gid ${USER_GID} ${USERNAME} \
+    && useradd --uid ${USER_UID} --gid ${USER_GID} -m ${USERNAME}
 
-# Setze Umgebungsvariablen für Poetry. POETRY_HOME wird hier verwendet,
-# um den Installationspfad festzulegen.
-ENV POETRY_HOME="/opt/poetry" \
-    POETRY_VIRTUALENVS_IN_PROJECT=false \
-    POETRY_NO_INTERACTION=1
-
-# Definiere den PATH für den Container, um die Poetry-Binaries zu finden
+# Poetry
+ENV POETRY_HOME="/opt/poetry"
 ENV PATH="${POETRY_HOME}/bin:${PATH}"
+ENV POETRY_VIRTUALENVS_IN_PROJECT=false
+ENV POETRY_NO_INTERACTION=1
 
-# Installiere Poetry als root in das definierte POETRY_HOME
-RUN curl -sSL https://install.python-poetry.org | python3 - --version 1.8.3
+RUN curl -sSL https://install.python-poetry.org | python3 - --version 1.8.3 \
+    && chown -R ${USERNAME}:${USERNAME} ${POETRY_HOME}
 
-# Ändere den Besitzer des Poetry-Installationsverzeichnisses zu appuser.
-RUN chown -R appuser:appuser "${POETRY_HOME}"
-
-# Setze das Arbeitsverzeichnis für das Projekt
 WORKDIR /app
 
-# Stelle sicher, dass der appuser Schreibrechte im Arbeitsverzeichnis hat.
-RUN chown -R appuser:appuser /app
+# Set ownership for /app
+RUN chown -R ${USERNAME}:${USERNAME} /app
 
-# Wechsle zum Nicht-Root-Benutzer für nachfolgende Befehle und zur Laufzeit
-USER appuser
+# Wechsel zu App-User
+USER ${USERNAME}
+ENV HOME="/home/${USERNAME}"
 
-# WICHTIG: Setze die HOME-Umgebungsvariable für den appuser.
-# Dies stellt sicher, dass Poetry und andere Tools die korrekte und beschreibbare Home-Direktory finden.
-ENV HOME="/home/appuser"
-
-# Kopiere die Poetry-Konfigurationsdateien, um den Docker-Layer-Cache zu optimieren
+# Vorab nur Poetry-Dateien für besseren Build-Cache
 COPY pyproject.toml poetry.lock ./
 
-# Installiere die Projekt-Abhängigkeiten (Produktion und Entwicklung)
 RUN poetry install --no-root --sync --with dev
 
 CMD ["bash"]
