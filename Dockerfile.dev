@@ -6,7 +6,7 @@ FROM python:${PYTHON_VERSION}-slim-bookworm
 
 # Systemaktualisierung und Git-Installation
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends git curl \
+    && apt-get install -y --no-install-recommends git curl gosu \
     && rm -rf /var/lib/apt/lists/*
 
 # Konfiguriere Git, um das /app-Verzeichnis als sicher zu betrachten.
