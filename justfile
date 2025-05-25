@@ -6,6 +6,8 @@ PYTHON_VERSION := env_var("PYTHON_VERSION")
 PACKAGE_NAME := `basename $(find src -maxdepth 1 -mindepth 1 -type d ! -name "__pycache__")`
 CONTAINER_PATH := "/opt/poetry/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 CONTAINER_IMAGE := PACKAGE_NAME + ":dev"
+HOST_UID := `id -u`
+HOST_GID := `id -g`
 
 # -- HELFER --
 # Zeigt alle verfügbaren Rezepte an
@@ -31,6 +33,7 @@ shell: build
     @echo "Starting interactive shell in development container..."
     docker run -it --rm \
         -e PATH="{{CONTAINER_PATH}}" \
+        -u {{HOST_UID}}:{{HOST_GID}} \
         -v {{SRC_DIR}}:/app \
         {{CONTAINER_IMAGE}} \
         bash
@@ -40,6 +43,7 @@ lint: build
     @echo "Running linting checks..."
     docker run --rm \
         -e PATH="{{CONTAINER_PATH}}" \
+        -u {{HOST_UID}}:{{HOST_GID}} \
         -v {{SRC_DIR}}:/app \
         {{CONTAINER_IMAGE}} \
         poetry run ruff check /app/src /app/tests
@@ -49,6 +53,7 @@ check: build
     @echo "Running all checks: Formatting, Linting, Type Checking, Tests..."
     docker run --rm \
         -e PATH="{{CONTAINER_PATH}}" \
+        -u {{HOST_UID}}:{{HOST_GID}} \
         -v {{SRC_DIR}}:/app \
         {{CONTAINER_IMAGE}} \
         bash -c " \
@@ -63,6 +68,7 @@ format: build
     @echo "Formatting code..."
     docker run --rm \
         -e PATH="{{CONTAINER_PATH}}" \
+        -u {{HOST_UID}}:{{HOST_GID}} \
         -v {{SRC_DIR}}:/app \
         {{CONTAINER_IMAGE}} \
         poetry run ruff format /app/src /app/tests
@@ -72,6 +78,7 @@ test: build
     @echo "Running tests..."
     docker run --rm \
         -e PATH="{{CONTAINER_PATH}}" \
+        -u {{HOST_UID}}:{{HOST_GID}} \
         -v {{SRC_DIR}}:/app \
         {{CONTAINER_IMAGE}} \
         poetry run pytest /app/tests
@@ -81,6 +88,7 @@ coverage: build
     @echo "Running pytest coverage..."
     docker run --rm \
         -e PATH="{{CONTAINER_PATH}}" \
+        -u {{HOST_UID}}:{{HOST_GID}} \
         -v {{SRC_DIR}}:/app \
         {{CONTAINER_IMAGE}} \
         poetry run pytest --cov=src --cov-report=term-missing
@@ -91,6 +99,7 @@ coverage-html: build
     @mkdir -p coverage_reports/htmlcov
     docker run --rm \
         -e PATH="{{CONTAINER_PATH}}" \
+        -u {{HOST_UID}}:{{HOST_GID}} \
         -v {{SRC_DIR}}:/app \
         -v $(pwd)/coverage_reports/htmlcov:/app/htmlcov \
         {{CONTAINER_IMAGE}} \
@@ -104,6 +113,7 @@ pre-commit: build
     @echo "Running pre-commit hooks in container..."
     docker run --rm \
         -e PATH="{{CONTAINER_PATH}}" \
+        -u {{HOST_UID}}:{{HOST_GID}} \
         -v {{SRC_DIR}}:/app \
         {{CONTAINER_IMAGE}} \
         poetry run pre-commit run --all-files
@@ -113,6 +123,7 @@ run: build
     @echo "Running the application..."
     docker run --rm \
         -e PATH="{{CONTAINER_PATH}}" \
+        -u {{HOST_UID}}:{{HOST_GID}} \
         -v {{SRC_DIR}}:/app \
         {{CONTAINER_IMAGE}} \
         poetry run python /app/src/{{PACKAGE_NAME}}/main.py
