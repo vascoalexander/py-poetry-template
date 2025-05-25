@@ -102,7 +102,7 @@ coverage-html: build
     # Container starten, um den Report zu generieren.
     docker run --rm --name tmp_cov_container \
         -e PATH="{{CONTAINER_PATH}}" \
-        -u root \ # Als root starten, um gosu nutzen zu können
+        -u root \
         -v {{SRC_DIR}}:/app \
         {{CONTAINER_IMAGE}} \
         bash -c "\
