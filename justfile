@@ -100,7 +100,7 @@ coverage-html: build
     @chown -R {{HOST_UID}}:{{HOST_GID}} coverage_reports
 
     # Container starten, um den Report zu generieren.
-    docker run --rm --name tmp_cov_container \ # Temporärer Name für den Container
+    docker run --rm --name tmp_cov_container \
         -e PATH="{{CONTAINER_PATH}}" \
         -u root \ # Als root starten, um gosu nutzen zu können
         -v {{SRC_DIR}}:/app \
