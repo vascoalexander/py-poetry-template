@@ -18,6 +18,8 @@ RUN pip install poetry
 
 RUN chown -R appuser:appuser /opt/poetry
 
+ENV PATH="/opt/poetry/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
 WORKDIR /app
 
 RUN chown -R appuser:appuser /app
