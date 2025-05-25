@@ -96,19 +96,39 @@ coverage: build
 # HTML Coverage Report generieren und direkt auf den Host speichern
 coverage-html: build
     @echo "Generating HTML coverage report..."
-    # Sicherstellen, dass der Host-Zielordner existiert (optional, da Docker es sonst erstellt)
     @mkdir -p coverage_reports/htmlcov
+    @chown -R {{HOST_UID}}:{{HOST_GID}} coverage_reports
 
-    docker run --rm \
+    # Container starten, um den Report zu generieren.
+    docker run --rm --name tmp_cov_container \ # Temporärer Name für den Container
+        -e PATH="{{CONTAINER_PATH}}" \
+        -u root \ # Als root starten, um gosu nutzen zu können
+        -v {{SRC_DIR}}:/app \
+        {{CONTAINER_IMAGE}} \
+        bash -c "\
+            mkdir -p /tmp/htmlcov_temp && \
+            chown appuser:appuser /tmp/htmlcov_temp && \
+            gosu appuser bash -c 'poetry run pytest --cov=src --cov-report=html:/tmp/htmlcov_temp' \
+        "
+
+    @rm -rf coverage_reports/htmlcov
+
+    docker run --name temp_cov_container_$(date +%s) \
         -e PATH="{{CONTAINER_PATH}}" \
         -u root \
         -v {{SRC_DIR}}:/app \
-        -v $(pwd)/coverage_reports/htmlcov:/app/htmlcov \
         {{CONTAINER_IMAGE}} \
         bash -c "\
-            chown -R {{HOST_UID}}:{{HOST_GID}} /app/htmlcov && \
-            gosu appuser bash -c 'mkdir -p /app/htmlcov && poetry run pytest --cov=src --cov-report=html:/app/htmlcov' \
+            mkdir -p /tmp/htmlcov_temp && \
+            chown appuser:appuser /tmp/htmlcov_temp && \
+            gosu appuser bash -c 'poetry run pytest --cov=src --cov-report=html:/tmp/htmlcov_temp' \
         "
+
+    CONTAINER_ID := $(shell docker ps -aq --filter "name=temp_cov_container_" --latest)
+
+    docker cp $(CONTAINER_ID):/tmp/htmlcov_temp/. coverage_reports/htmlcov
+
+    docker rm $(CONTAINER_ID)
 
     @echo "HTML coverage report generated in coverage_reports/htmlcov/ (on your host)."
     @echo "You can open coverage_reports/htmlcov/index.html in your browser."
