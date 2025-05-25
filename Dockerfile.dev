@@ -9,12 +9,13 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends git curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Git-Konfiguration für /app
+# Konfiguriere Git, um das /app-Verzeichnis als sicher zu betrachten.
 RUN git config --global --add safe.directory /app
 
 # Erstelle den Nicht-Root-Benutzer 'appuser'
-# NEU: Erstelle das Home-Verzeichnis für appuser explizit
-RUN adduser --system --group --uid 1000 --shell /bin/bash --home /home/appuser --create-home appuser
+# NEU: Entferne --create-home, da adduser auf Debian-basierten Systemen dies nicht kennt.
+# --home /home/appuser sollte das Verzeichnis standardmäßig erstellen.
+RUN adduser --system --group --uid 1000 --shell /bin/bash --home /home/appuser appuser
 
 # Setze Umgebungsvariablen für Poetry. POETRY_HOME wird hier verwendet,
 # um den Installationspfad festzulegen.
@@ -44,7 +45,7 @@ RUN chown -R appuser:appuser /app
 USER appuser
 
 # WICHTIG: Setze die HOME-Umgebungsvariable für den appuser.
-# Poetry und andere Tools erwarten, dass HOME auf ein beschreibbares Verzeichnis zeigt.
+# Dies stellt sicher, dass Poetry und andere Tools die korrekte und beschreibbare Home-Direktory finden.
 ENV HOME="/home/appuser"
 
 # Kopiere die Poetry-Konfigurationsdateien, um den Docker-Layer-Cache zu optimieren
