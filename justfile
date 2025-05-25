@@ -36,13 +36,27 @@ shell: build
         bash
 
 # Linting-Checks
-check: build
+lint: build
     @echo "Running linting checks..."
     docker run --rm \
         -e PATH="{{CONTAINER_PATH}}" \
         -v {{SRC_DIR}}:/app \
         {{CONTAINER_IMAGE}} \
         poetry run ruff check /app/src /app/tests
+
+# Checks: Formatierung, Linting, Type-Checking, Tests
+check: build
+    @echo "Running all checks: Formatting, Linting, Type Checking, Tests..."
+    docker run --rm \
+        -e PATH="{{CONTAINER_PATH}}" \
+        -v {{SRC_DIR}}:/app \
+        {{CONTAINER_IMAGE}} \
+        bash -c " \
+            poetry run ruff format src tests && \
+            poetry run ruff check src tests && \
+            poetry run mypy src tests && \
+            poetry run pytest src tests \
+        "
 
 # Code formatieren
 format: build
@@ -61,6 +75,29 @@ test: build
         -v {{SRC_DIR}}:/app \
         {{CONTAINER_IMAGE}} \
         poetry run pytest /app/tests
+
+# Test Coverage
+coverage: build
+    @echo "Running pytest coverage..."
+    docker run --rm \
+        -e PATH="{{CONTAINER_PATH}}" \
+        -v {{SRC_DIR}}:/app \
+        {{CONTAINER_IMAGE}} \
+        poetry run pytest --cov=src --cov-report=term-missing
+
+# HTML Coverage Report generieren und direkt auf den Host speichern
+coverage-html: build
+    @echo "Generating HTML coverage report..."
+    @mkdir -p coverage_reports/htmlcov
+    docker run --rm \
+        -e PATH="{{CONTAINER_PATH}}" \
+        -v {{SRC_DIR}}:/app \
+        -v $(pwd)/coverage_reports/htmlcov:/app/htmlcov \
+        {{CONTAINER_IMAGE}} \
+        poetry run pytest --cov=src --cov-report=html:/app/htmlcov
+
+    @echo "HTML coverage report generated in coverage_reports/htmlcov/ (on your host)."
+    @echo "You can open coverage_reports/htmlcov/index.html in your browser."
 
 # Führt pre-commit Hooks manuell im Container aus
 pre-commit: build
