@@ -13,14 +13,11 @@ ENV POETRY_HOME="/opt/poetry" \
     POETRY_VIRTUALENVS_IN_PROJECT=false \
     POETRY_NO_INTERACTION=1
 
-RUN mkdir -p "${POETRY_HOME}" \
-    && chmod -R 777 "${POETRY_HOME}"
+RUN curl -sSL https://install.python-poetry.org | python - --version 1.8.3
 
-RUN pip install poetry --prefix="${POETRY_HOME}"
+ENV PATH="${POETRY_HOME}/bin:${PATH}"
 
 RUN chown -R appuser:appuser "${POETRY_HOME}"
-
-ENV PATH="/opt/poetry/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
 WORKDIR /app
 
