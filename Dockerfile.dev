@@ -20,7 +20,7 @@ RUN git config --global --add safe.directory /app
 # User anlegen mit Host-UID/GID
 RUN groupadd --gid ${USER_GID} ${USERNAME} \
     && useradd --uid ${USER_UID} --gid ${USER_GID} -m ${USERNAME} \
-    && usermod -aG sudo ${USERNAME}  # Optional, falls sudo gebraucht wird
+    && usermod -aG sudo ${USERNAME}
 
 # Poetry
 ENV POETRY_HOME="/opt/poetry"

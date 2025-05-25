@@ -19,8 +19,8 @@ build:
 		-f Dockerfile.dev \
 		-t $(IMAGE_TAG) \
 		--build-arg PYTHON_VERSION=$(PYTHON_VERSION) \
-        --build-arg USER_UID=$(id -u) \
-        --build-arg USER_GID=$(id -g) \
+		--build-arg USER_UID=$(shell id -u) \
+		--build-arg USER_GID=$(shell id -g) \
 		.
 
 clean:
@@ -80,13 +80,19 @@ coverage: build
 
 coverage-html: build
 	mkdir -p coverage_reports/htmlcov
+	chown $(shell id -u):$(shell id -g) coverage_reports/htmlcov
+
 	docker run --rm \
 		-e PATH=$(CONTAINER_PATH) \
 		-u $(shell id -u):$(shell id -g) \
 		-v $(PWD):/app \
-		-v $(PWD)/coverage_reports/htmlcov:/app/htmlcov \
 		$(IMAGE_TAG) \
-		bash -c "poetry run pytest --cov=src --cov-report=html:/app/htmlcov"
+		bash -c "\
+			rm -rf /tmp/htmlcov && \
+			poetry run pytest --cov=src --cov-report=html:/tmp/htmlcov && \
+			rm -rf /app/coverage_reports/htmlcov/* && \
+			cp -a /tmp/htmlcov/. /app/coverage_reports/htmlcov && \
+			chown -R $(shell id -u):$(shell id -g) /app/coverage_reports/htmlcov"
 
 pre-commit: build
 	docker run --rm \
