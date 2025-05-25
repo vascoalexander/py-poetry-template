@@ -94,16 +94,21 @@ coverage: build
         poetry run pytest --cov=src --cov-report=term-missing
 
 # HTML Coverage Report generieren und direkt auf den Host speichern
+# HTML Coverage Report generieren und direkt auf den Host speichern
 coverage-html: build
     @echo "Generating HTML coverage report..."
     @mkdir -p coverage_reports/htmlcov
+
     docker run --rm \
         -e PATH="{{CONTAINER_PATH}}" \
-        -u {{HOST_UID}}:{{HOST_GID}} \
+        -u root \
         -v {{SRC_DIR}}:/app \
         -v $(pwd)/coverage_reports/htmlcov:/app/htmlcov \
         {{CONTAINER_IMAGE}} \
-        poetry run pytest --cov=src --cov-report=html:/app/htmlcov
+        bash -c "\
+            chown -R {{HOST_UID}}:{{HOST_GID}} /app/htmlcov && \
+            poetry run pytest --cov=src --cov-report=html:/app/htmlcov \
+        "
 
     @echo "HTML coverage report generated in coverage_reports/htmlcov/ (on your host)."
     @echo "You can open coverage_reports/htmlcov/index.html in your browser."
