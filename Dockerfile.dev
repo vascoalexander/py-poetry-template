@@ -17,9 +17,10 @@ RUN apt-get update \
 # Git: /app als sicher markieren
 RUN git config --global --add safe.directory /app
 
-# User anlegen
+# User anlegen mit Host-UID/GID
 RUN groupadd --gid ${USER_GID} ${USERNAME} \
-    && useradd --uid ${USER_UID} --gid ${USER_GID} -m ${USERNAME}
+    && useradd --uid ${USER_UID} --gid ${USER_GID} -m ${USERNAME} \
+    && usermod -aG sudo ${USERNAME}  # Optional, falls sudo gebraucht wird
 
 # Poetry
 ENV POETRY_HOME="/opt/poetry"
@@ -32,14 +33,14 @@ RUN curl -sSL https://install.python-poetry.org | python3 - --version 1.8.3 \
 
 WORKDIR /app
 
-# Set ownership for /app
+# Set ownership für /app (wichtig für gemountete Volumes)
 RUN chown -R ${USERNAME}:${USERNAME} /app
 
-# Wechsel zu App-User
+# Wechsel zu User mit Host UID/GID
 USER ${USERNAME}
 ENV HOME="/home/${USERNAME}"
 
-# Vorab nur Poetry-Dateien für besseren Build-Cache
+# Kopiere Poetry-Dateien für Cache
 COPY pyproject.toml poetry.lock ./
 
 RUN poetry install --no-root --sync --with dev

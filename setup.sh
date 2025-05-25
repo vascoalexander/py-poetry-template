@@ -203,12 +203,13 @@ echo ""
 # --- 5. Docker Image bauen ---
 echo -e "${YELLOW}Schritt 7: Docker Development Image bauen...${NC}"
 echo "Starte den Build des Docker-Images (dies kann einen Moment dauern)..."
-if ! command -v just &> /dev/null; then
-    echo -e "${RED}Fehler: 'just' Befehl nicht gefunden. Bitte installieren Sie 'just' (z.B. brew install just / sudo apt install just).${NC}"
+if ! command -v make &> /dev/null; then
+    echo -e "${RED}Fehler: 'make' Befehl nicht gefunden. Bitte installieren Sie 'make' (z.B. sudo apt install make).${NC}"
     exit 1
 fi
 
-PYTHON_VERSION="$PYTHON_VERSION" just build
+PYTHON_VERSION="$PYTHON_VERSION" make build
+
 if [ $? -ne 0 ]; then
     echo -e "${RED}Fehler beim Bauen des Docker-Images. Überprüfen Sie Ihr Dockerfile.dev und die 'just' Ausgabe.${NC}"
     exit 1
@@ -235,7 +236,7 @@ echo "Host-seitige Pre-commit Hooks installiert."
 # Dies stellt sicher, dass alle initialen Formatierungen und Checks angewendet werden
 echo "Führe erste Pre-commit Checks aus (dies kann Dateien ändern)..."
 # Hier rufen wir das 'just' Kommando auf, um die Checks IM CONTAINER auszuführen
-just pre-commit-run || { echo -e "${YELLOW}Warnung: Initialer 'pre-commit-run' über Docker fehlgeschlagen. Überprüfen Sie die Ausgabe.${NC}"; }
+make pre
 echo "Initialer Pre-commit-Lauf abgeschlossen."
 echo ""
 
