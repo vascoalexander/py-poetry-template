@@ -1,32 +1,57 @@
+# Dockerfile.dev
+
 ARG PYTHON_VERSION=3.12
 
 FROM python:${PYTHON_VERSION}-slim-bookworm
 
+# Installiere Git im Docker-Image
 RUN apt-get update && apt-get install -y git \
     && rm -rf /var/lib/apt/lists/*
 
+# Konfiguriere Git, um das /app-Verzeichnis als sicher zu betrachten.
 RUN git config --global --add safe.directory /app
 
+# Füge einen Benutzer mit einer Dummy-UID/GID hinzu, die vom Host überschrieben wird.
 RUN adduser --system --group --uid 1000 --shell /bin/bash appuser
 
-ENV POETRY_HOME="/opt/poetry" \
-    POETRY_VIRTUALENVS_IN_PROJECT=false \
-    POETRY_NO_INTERACTION=1
+# Setze Umgebungsvariablen für Poetry (wichtig, bevor get-poetry.py läuft)
+# POETRY_HOME muss definiert sein, damit das Skript Poetry dorthin installiert
+ENV POETRY_HOME="/opt/poetry"
+ENV POETRY_VIRTUALENVS_IN_PROJECT=false
+ENV POETRY_NO_INTERACTION=1
 
+# NEU: Installiere Poetry über das offizielle Installationsskript
+# Es wird von root heruntergeladen und ausgeführt, aber es installiert Poetry
+# unter dem Pfad POETRY_HOME, wie von uns definiert.
+# Das Skript fügt auch automatisch den richtigen Pfad zur Poetry-Binärdatei hinzu.
 RUN curl -sSL https://install.python-poetry.org | python - --version 1.8.3
 
+# Entferne den temporären Installations-Cache, falls vorhanden
+# RUN rm -rf /tmp/get-poetry.py.?????????
+
+# NEU: Der PATH sollte jetzt korrekt sein, aber wir definieren ihn explizit für Klarheit
+# get-poetry.py installiert die poetry binary in $POETRY_HOME/bin
+# und fügt $POETRY_HOME/bin zu PATH hinzu, wenn es shell config modified.
+# Wir setzen es hier fest, da wir es in `justfile` auch festlegen.
 ENV PATH="${POETRY_HOME}/bin:${PATH}"
 
+# Wir müssen hier trotzdem noch den Besitzer von POETRY_HOME ändern,
+# da das Skript es als root installiert.
 RUN chown -R appuser:appuser "${POETRY_HOME}"
 
+# Setze das Arbeitsverzeichnis im Container
 WORKDIR /app
 
+# Ändere den Besitzer des /app Verzeichnisses auf den neu erstellten Benutzer.
 RUN chown -R appuser:appuser /app
 
+# Wechsle zum 'appuser' für nachfolgende Befehle
 USER appuser
 
+# Kopiere nur die Poetry-Konfigurationsdateien, um den Docker-Layer-Cache zu optimieren
 COPY pyproject.toml poetry.lock ./
 
+# Installiere die Projekt-Abhängigkeiten (Produktion und Entwicklung) im Image
 RUN poetry install --no-root --sync --with dev
 
 CMD ["bash"]
