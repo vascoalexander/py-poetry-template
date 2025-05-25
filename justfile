@@ -99,21 +99,9 @@ coverage-html: build
     @mkdir -p coverage_reports/htmlcov
     @chown -R {{HOST_UID}}:{{HOST_GID}} coverage_reports
 
-    # Container starten, um den Report zu generieren.
-    docker run --rm --name tmp_cov_container \
-        -e PATH="{{CONTAINER_PATH}}" \
-        -u root \
-        -v {{SRC_DIR}}:/app \
-        {{CONTAINER_IMAGE}} \
-        bash -c "\
-            mkdir -p /tmp/htmlcov_temp && \
-            chown appuser:appuser /tmp/htmlcov_temp && \
-            gosu appuser bash -c 'poetry run pytest --cov=src --cov-report=html:/tmp/htmlcov_temp' \
-        "
-
     @rm -rf coverage_reports/htmlcov
 
-    docker run --name temp_cov_container_$(date +%s) \
+    docker run --name temp_cov_container_$(date +%s) --label just.coverage.html \
         -e PATH="{{CONTAINER_PATH}}" \
         -u root \
         -v {{SRC_DIR}}:/app \
@@ -124,7 +112,7 @@ coverage-html: build
             gosu appuser bash -c 'poetry run pytest --cov=src --cov-report=html:/tmp/htmlcov_temp' \
         "
 
-    CONTAINER_ID := $(shell docker ps -aq --filter "name=temp_cov_container_" --latest)
+    CONTAINER_ID = $(docker ps -aq --filter "label=just.coverage.html" --latest)
 
     docker cp $(CONTAINER_ID):/tmp/htmlcov_temp/. coverage_reports/htmlcov
 
