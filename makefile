@@ -63,7 +63,7 @@ test: build
 		-u $(HOST_UID):$(HOST_GID) \
 		-v $(PWD):/app \
 		$(IMAGE_TAG) \
-		poetry run pytest /app/tests
+		mise exec -- poetry run pytest /app/tests
 
 coverage: build
 	docker run --rm \
@@ -71,7 +71,7 @@ coverage: build
 		-u $(HOST_UID):$(HOST_GID) \
 		-v $(PWD):/app \
 		$(IMAGE_TAG) \
-		poetry run pytest --cov=src --cov-report=term-missing
+		mise exec -- poetry run pytest --cov=src --cov-report=term-missing
 
 coverage-html: build
 	mkdir -p coverage_reports/htmlcov
@@ -84,7 +84,7 @@ coverage-html: build
 		$(IMAGE_TAG) \
 		bash -c "\
 			rm -rf /tmp/htmlcov && \
-			poetry run pytest --cov=src --cov-report=html:/tmp/htmlcov && \
+			mise exec -- poetry run pytest --cov=src --cov-report=html:/tmp/htmlcov && \
 			rm -rf /app/coverage_reports/htmlcov/* && \
 			cp -a /tmp/htmlcov/. /app/coverage_reports/htmlcov && \
 			chown -R $(shell id -u):$(shell id -g) /app/coverage_reports/htmlcov"
@@ -95,7 +95,7 @@ run: build
 		-u $(HOST_UID):$(HOST_GID) \
 		-v $(PWD):/app \
 		$(IMAGE_TAG) \
-		poetry run python /app/src/$(PACKAGE_NAME)/main.py
+		mise exec -- poetry run python /app/src/$(PACKAGE_NAME)/main.py
 
 ## Host-seitige Tasks
 

@@ -23,7 +23,7 @@ RUN groupadd --gid ${USER_GID} ${USERNAME} \
 USER ${USERNAME}
 
 # Mise Installation für den appuser
-ENV PATH="/home/${USERNAME}/.local/bin:/home/${USERNAME}/.local/share/mise/shims:$PATH"
+ENV PATH="/home/appuser/.local/bin:/home/appuser/.local/share/mise/shims:$PATH"
 ENV MISE_HOME="/home/${USERNAME}/.local/share/mise"
 
 WORKDIR /app
