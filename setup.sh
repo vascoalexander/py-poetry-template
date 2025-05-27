@@ -115,14 +115,40 @@ sed -i.bak "/^readme = \".*\"/a packages = [{include = \"$PACKAGE_NAME\", from =
 rm -f pyproject.toml.bak
 echo "pyproject.toml wurde aktualisiert."
 
-# --- 2.5: Mise Konfiguration erstellen ---
+# --- 3. Ordnerstruktur und __init__.py anpassen ---
+echo -e "${YELLOW}Schritt 3: Ordnerstruktur und Python-Dateien anpassen...${NC}"
+OLD_PACKAGE_NAME="my_project_name"
+
+if [ -d "src/$OLD_PACKAGE_NAME" ]; then
+    mv "src/$OLD_PACKAGE_NAME" "src/$PACKAGE_NAME"
+    echo "src/$OLD_PACKAGE_NAME in src/$PACKAGE_NAME umbenannt."
+else
+    echo -e "${YELLOW}Warnung: Alter Paketordner 'src/$OLD_PACKAGE_NAME' nicht gefunden. Überspringe Umbenennung.${NC}"
+    if [ ! -d "src/$PACKAGE_NAME" ]; then
+        echo -e "${RED}Fehler: Weder alter noch neuer Paketordner in 'src/' gefunden. Bitte manuell anlegen oder umbenennen.${NC}"
+        exit 1
+    fi
+fi
+
+# Erstelle oder aktualisiere __init__.py
+INIT_PY_CONTENT="from importlib.metadata import PackageNotFoundError, version\n\ntry:\n    __version__ = version(\"$PACKAGE_NAME\")\nexcept PackageNotFoundError:\n    __version__ = \"unknown\"\n"
+mkdir -p "src/$PACKAGE_NAME"
+echo -e "$INIT_PY_CONTENT" > "src/$PACKAGE_NAME/__init__.py"
+echo "src/$PACKAGE_NAME/__init__.py wurde erstellt/aktualisiert."
+
+# main.py aktualisieren
+MAIN_PY_CONTENT="import sys\n\ndef main() -> None:\n    print(\"Hello, world from your new Python project!\")\n    print(f\"Python version: {sys.version}\")\n\nif __name__ == '__main__':\n    main()\n"
+echo -e "$MAIN_PY_CONTENT" > "src/$PACKAGE_NAME/main.py"
+echo "src/$PACKAGE_NAME/main.py wurde erstellt/aktualisiert mit statischem Gruß."
+
+# --- 4: Mise Konfiguration erstellen ---
 # Erstelle .tool-versions für mise
 echo -e "${YELLOW}Schritt 2.5: Mise Konfiguration (.tool-versions und mise.toml) erstellen...${NC}"
 echo "python $PYTHON_VERSION" > .tool-versions
 echo "poetry latest" >> .tool-versions # Füge Poetry hinzu, damit mise es verwaltet
 echo ".tool-versions für mise erstellt."
 
-# --- 2.6: Mise und Poetry auf dem Host installieren und Abhängigkeiten synchronisieren ---
+# --- 4.5: Mise und Poetry auf dem Host installieren und Abhängigkeiten synchronisieren ---
 echo -e "${YELLOW}Schritt 2.6: Mise und Poetry auf dem Host installieren und Abhängigkeiten synchronisieren...${NC}"
 
 # Überprüfe, ob mise auf dem Host installiert ist
@@ -163,33 +189,7 @@ fi
 echo "poetry.lock erfolgreich generiert/aktualisiert."
 echo ""
 
-# --- 3. Ordnerstruktur und __init__.py anpassen ---
-echo -e "${YELLOW}Schritt 3: Ordnerstruktur und Python-Dateien anpassen...${NC}"
-OLD_PACKAGE_NAME="my_project_name"
-
-if [ -d "src/$OLD_PACKAGE_NAME" ]; then
-    mv "src/$OLD_PACKAGE_NAME" "src/$PACKAGE_NAME"
-    echo "src/$OLD_PACKAGE_NAME in src/$PACKAGE_NAME umbenannt."
-else
-    echo -e "${YELLOW}Warnung: Alter Paketordner 'src/$OLD_PACKAGE_NAME' nicht gefunden. Überspringe Umbenennung.${NC}"
-    if [ ! -d "src/$PACKAGE_NAME" ]; then
-        echo -e "${RED}Fehler: Weder alter noch neuer Paketordner in 'src/' gefunden. Bitte manuell anlegen oder umbenennen.${NC}"
-        exit 1
-    fi
-fi
-
-# Erstelle oder aktualisiere __init__.py
-INIT_PY_CONTENT="from importlib.metadata import PackageNotFoundError, version\n\ntry:\n    __version__ = version(\"$PACKAGE_NAME\")\nexcept PackageNotFoundError:\n    __version__ = \"unknown\"\n"
-mkdir -p "src/$PACKAGE_NAME"
-echo -e "$INIT_PY_CONTENT" > "src/$PACKAGE_NAME/__init__.py"
-echo "src/$PACKAGE_NAME/__init__.py wurde erstellt/aktualisiert."
-
-# main.py aktualisieren
-MAIN_PY_CONTENT="import sys\n\ndef main() -> None:\n    print(\"Hello, world from your new Python project!\")\n    print(f\"Python version: {sys.version}\")\n\nif __name__ == '__main__':\n    main()\n"
-echo -e "$MAIN_PY_CONTENT" > "src/$PACKAGE_NAME/main.py"
-echo "src/$PACKAGE_NAME/main.py wurde erstellt/aktualisiert mit statischem Gruß."
-
-# --- 4. Git-Initialisierung und erster Commit ---
+# --- 5. Git-Initialisierung und erster Commit ---
 echo -e "${YELLOW}Schritt 5.5: Git-Repository initialisieren und erster Commit...${NC}"
 if [ ! -d ".git" ]; then
     git init
@@ -213,7 +213,7 @@ else
 fi
 echo ""
 
-# --- 5. Docker Image bauen ---
+# --- 6. Docker Image bauen ---
 echo -e "${YELLOW}Schritt 7: Docker Development Image bauen...${NC}"
 echo "Starte den Build des Docker-Images (dies kann einen Moment dauern)..."
 if ! command -v make &> /dev/null; then
@@ -230,7 +230,7 @@ fi
 echo "Docker Development Image erfolgreich gebaut!"
 echo ""
 
-# --- 6. Pre-commit Hooks installieren (Host-seitig) ---
+# --- 7. Pre-commit Hooks installieren (Host-seitig) ---
 echo -e "${YELLOW}Schritt 7: Pre-commit Hooks installieren (Host-seitig und via Docker)...${NC}"
 # Installiere den Pre-commit Client auf dem Host, damit die Git-Hooks funktionieren
 echo "Installiere 'pre-commit' Tool auf dem Host (falls noch nicht vorhanden)..."
