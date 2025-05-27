@@ -1,46 +1,35 @@
-# Dockerfile.dev
+FROM python:3.12-slim
 
-ARG PYTHON_VERSION=3.12
-FROM debian:bookworm-slim
+ENV USERNAME=appuser \
+    UID=1000 \
+    GID=1000 \
+    MISE_HOME=/home/appuser/.local/share/mise
 
-# Build-Args für User-Mapping
-ARG USERNAME=appuser
-ARG USER_UID=1000
-ARG USER_GID=1000
-
-# Systempakete
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl git zsh unzip ca-certificates build-essential sudo python3 python3-pip \
+# System-Abhängigkeiten
+RUN apt-get update && apt-get install -y \
+    curl build-essential git sudo \
     && rm -rf /var/lib/apt/lists/*
 
-# Git: /app als sicher markieren
-RUN git config --global --add safe.directory /app
-
-# App-User mit UID/GID des Hosts
-RUN groupadd --gid ${USER_GID} ${USERNAME} \
-    && useradd --uid ${USER_UID} --gid ${USER_GID} -m ${USERNAME} \
+# User erstellen
+RUN groupadd --gid ${GID} ${USERNAME} \
+    && useradd --uid ${UID} --gid ${GID} -m ${USERNAME} \
     && usermod -aG sudo ${USERNAME}
 
 USER ${USERNAME}
-
-# Mise Installation für den appuser
-ENV PATH="/home/${USERNAME}/.local/bin:/home/${USERNAME}/.local/share/mise/shims:$PATH"
-
 WORKDIR /app
-COPY --chown=${USER_UID}:${USER_GID} pyproject.toml poetry.lock .tool-versions ./
+ENV HOME=/home/${USERNAME}
+ENV PATH="${MISE_HOME}/shims:${MISE_HOME}/bin:$PATH"
 
+# mise installieren
 RUN curl -sSf https://mise.run | sh
 
-RUN echo 'eval "$(mise activate bash)"' >> /home/${USERNAME}/.bashrc
-
-# Installiere Python-Dependencies über mise und Poetry
+# Python, poetry & Tools via mise installieren
+COPY --chown=appuser:appuser mise.toml .
 RUN mise install
-RUN mise exec -- poetry install --no-root --sync --with dev \
-    && mkdir -p /home/${USERNAME}/.cache/pypoetry/virtualenvs \
-    && chown -R ${USERNAME}:${USERNAME} /home/${USERNAME}/.cache/pypoetry \
-    && chown -R ${USERNAME}:${USERNAME} ${MISE_HOME}
 
-# Jetzt den restlichen Projektcode kopieren
-COPY --chown=${USER_UID}:${USER_GID} . .
+# Globale Konfiguration: kein in-project venv
+RUN mise exec -- poetry config virtualenvs.in-project false
 
-CMD ["bash"]
+# Abhängigkeiten installieren
+COPY --chown=appuser:appuser pyproject.toml poetry.lock ./
+RUN mise exec -- poetry install --no-root --sync --with dev

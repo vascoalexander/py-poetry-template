@@ -137,7 +137,7 @@ echo -e "$INIT_PY_CONTENT" > "src/$PACKAGE_NAME/__init__.py"
 echo "src/$PACKAGE_NAME/__init__.py wurde erstellt/aktualisiert."
 
 # main.py aktualisieren
-MAIN_PY_CONTENT="import sys\n\ndef main() -> None:\n    print(\"Hello, world from your new Python project!\")\n    print(f\"Python version: {sys.version}\")\n\nif __name__ == '__main__':\n    main()\n"
+MAIN_PY_CONTENT="import sys\n\n\ndef main() -> None:\n    print(\"Hello, world from your new Python project!\")\n    print(f\"Python version: {sys.version}\")\n\nif __name__ == '__main__':\n    main()\n"
 echo -e "$MAIN_PY_CONTENT" > "src/$PACKAGE_NAME/main.py"
 echo "src/$PACKAGE_NAME/main.py wurde erstellt/aktualisiert mit statischem Gruß."
 
