@@ -9,7 +9,7 @@ PACKAGE_NAME := $(shell basename $(shell find src -maxdepth 1 -mindepth 1 -type 
 IMAGE_TAG := $(PACKAGE_NAME):dev
 HOST_UID := $(shell id -u)
 HOST_GID := $(shell id -g)
-CONTAINER_PATH := "/opt/poetry/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+CONTAINER_PATH := "/home/appuser/.local/share/mise/shims:/home/appuser/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
 .PHONY: build clean shell lint check format test coverage coverage-html pre-commit run help
 
