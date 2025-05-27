@@ -111,6 +111,7 @@ sed -i.bak "s/^version = \".*\"/version = \"0.1.0\"/" pyproject.toml
 sed -i.bak "s/^description = \".*\"/description = \"$PROJECT_DESCRIPTION\"/" pyproject.toml
 sed -i.bak "s/^authors = \[.*\]/authors = [\"$AUTHOR_NAME <$AUTHOR_EMAIL>\"]/" pyproject.toml
 sed -i.bak "s/^python = \"\^.*\"/python = \"^$PYTHON_VERSION\"/" pyproject.toml
+sed -i.bak "/^readme = \".*\"/a packages = [{include = \"$PACKAGE_NAME\", from = \"src\"}]" pyproject.toml
 rm -f pyproject.toml.bak
 echo "pyproject.toml wurde aktualisiert."
 
