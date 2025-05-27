@@ -114,40 +114,55 @@ sed -i.bak "s/^python = \"\^.*\"/python = \"^$PYTHON_VERSION\"/" pyproject.toml
 rm -f pyproject.toml.bak
 echo "pyproject.toml wurde aktualisiert."
 
-# --- NEU: 2.5: Poetry.lock Datei generieren (auf dem Host) ---
-# Dies ist notwendig, damit Docker die poetry.lock beim Build kopieren kann.
-echo -e "${YELLOW}Schritt 2.5: poetry.lock Datei generieren...${NC}"
+# --- 2.5: Mise Konfiguration erstellen ---
+# Erstelle .tool-versions für mise
+echo -e "${YELLOW}Schritt 2.5: Mise Konfiguration (.tool-versions und mise.toml) erstellen...${NC}"
+echo "python $PYTHON_VERSION" > .tool-versions
+echo "poetry latest" >> .tool-versions # Füge Poetry hinzu, damit mise es verwaltet
+echo ".tool-versions für mise erstellt."
 
-# Überprüfe, ob Poetry auf dem Host installiert ist
-if ! command -v poetry &> /dev/null; then
-    echo -e "${YELLOW}Poetry wurde auf Ihrem Host nicht gefunden. Versuche, Poetry zu installieren...${NC}"
+# --- 2.6: Poetry.lock Datei generieren (auf dem Host mit mise!) ---
+# Da mise jetzt die Versionen verwaltet, können wir poetry darüber installieren
+# und dann poetry lock ausführen.
+echo -e "${YELLOW}Schritt 2.6: poetry.lock Datei generieren (via mise auf dem Host)...${NC}"
 
-    # Versuche, pipx zu installieren
-    if ! command -v pipx &> /dev/null; then
-        echo -e "${YELLOW}pipx wurde nicht gefunden. Versuche, pipx zu installieren...${NC}"
-        # --break-system-packages wird manchmal unter bestimmten Linux-Distributionen benötigt,
-        # wenn pipx ansonsten Probleme mit dem System-Python hat.
-        python3 -m pip install --user pipx || { echo -e "${RED}Fehler: Konnte pipx nicht installieren. Bitte installieren Sie pipx manuell (z.B. 'pip install --user pipx') und versuchen Sie es erneut.${NC}"; exit 1; }
-        python3 -m pipx ensurepath || { echo -e "${RED}Fehler: Konnte pipx Pfad nicht zur PATH-Umgebungsvariable hinzufügen. Bitte prüfen Sie Ihre Installation.${NC}"; }
-        # Hinweis, dass der Benutzer das Terminal ggfs neu starten muss
-        echo -e "${YELLOW}Hinweis: Möglicherweise müssen Sie dieses Terminal schließen und ein neues öffnen, damit 'pipx' und 'poetry' im PATH verfügbar sind.${NC}"
-        echo -e "${GREEN}pipx wurde installiert und zum PATH hinzugefügt.${NC}"
-    fi
-
-    # Installiere Poetry mit pipx
-    pipx install poetry || { echo -e "${RED}Fehler: Konnte Poetry nicht mit pipx installieren. Bitte versuchen Sie es manuell: 'pipx install poetry'${NC}"; exit 1; }
-    echo -e "${GREEN}Poetry wurde erfolgreich installiert.${NC}"
+# Überprüfe, ob mise auf dem Host installiert ist
+if ! command -v mise &> /dev/null; then
+    echo -e "${YELLOW}mise wurde auf Ihrem Host nicht gefunden. Versuche, mise zu installieren...${NC}"
+    # Standard-Installationsmethode für mise
+    curl https://mise.run | sh
+    # Füge mise zum PATH hinzu, falls noch nicht geschehen (für die aktuelle Shell-Session)
+    export PATH="$HOME/.local/share/mise/bin:$PATH"
+    echo -e "${GREEN}mise wurde installiert und zum PATH hinzugefügt.${NC}"
 else
-    echo -e "${GREEN}Poetry ist bereits auf Ihrem Host installiert.${NC}"
+    echo -e "${GREEN}mise ist bereits auf Ihrem Host installiert.${NC}"
 fi
 
-echo "Generiere poetry.lock..."
-poetry lock
+# Installiere die im .tool-versions definierten Tools (Python, Poetry) mit mise
+echo "Installiere Python und Poetry über mise auf dem Host..."
+mise install
 if [ $? -ne 0 ]; then
-    echo -e "${RED}Fehler beim Generieren der poetry.lock Datei. Überprüfen Sie Ihre Poetry-Installation und pyproject.toml.${NC}"
+    echo -e "${RED}Fehler: Konnte Python und/oder Poetry nicht mit mise installieren. Bitte prüfen Sie Ihre mise-Installation und .tool-versions.${NC}"
     exit 1
 fi
-echo "poetry.lock erfolgreich generiert."
+echo "Python und Poetry über mise erfolgreich installiert."
+
+# Installiere Poetry-Abhängigkeiten auf dem Host
+echo "Installiere Poetry-Abhängigkeiten (einschließlich dev-Dependencies) auf dem Host..."
+mise run poetry install --sync --with dev
+if [ $? -ne 0 ]; then
+    echo -e "${RED}Fehler beim Installieren der Poetry-Abhängigkeiten auf dem Host. Überprüfen Sie Ihre pyproject.toml.${NC}"
+    exit 1
+fi
+echo "Poetry-Abhängigkeiten auf dem Host erfolgreich installiert."
+
+echo "Generiere oder aktualisiere poetry.lock mit mise poetry..."
+mise run poetry lock --no-update
+if [ $? -ne 0 ]; then
+    echo -e "${RED}Fehler beim Generieren/Aktualisieren der poetry.lock Datei via mise. Überprüfen Sie Ihre Poetry-Installation und pyproject.toml.${NC}"
+    exit 1
+fi
+echo "poetry.lock erfolgreich generiert/aktualisiert."
 echo ""
 
 # --- 3. Ordnerstruktur und __init__.py anpassen ---
