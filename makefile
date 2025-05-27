@@ -116,7 +116,7 @@ check: lint
 	poetry run mypy src tests
 
 pre-commit:
-    @echo "Running pre-commit hooks on host via poetry..."
+	@echo "Running pre-commit hooks on host via poetry..."
 	poetry run pre-commit run --all-files
 
 
