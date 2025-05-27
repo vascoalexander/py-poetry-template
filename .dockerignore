@@ -1,0 +1,30 @@
+# virtuelle Umgebungen
+.venv/
+env/
+venv/
+
+# Python-Caches
+__pycache__/
+*.pyc
+*.pyo
+
+# Tool-spezifische Caches
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+
+# Versionsverwaltung & Konfiguration
+.git/
+.gitignore
+.gitattributes
+
+# CI / GitHub-spezifisch
+.github/
+
+# Sonstiges
+.DS_Store
+.idea/
+.vscode/
+*.log
+
+
