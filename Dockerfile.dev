@@ -24,20 +24,18 @@ RUN groupadd --gid ${USER_GID} ${USERNAME} \
 USER ${USERNAME}
 
 # Mise Installation für den appuser
-ENV MISE_HOME="/home/${USERNAME}/.local/share/mise"
-ENV PATH="${MISE_HOME}/bin:${MISE_HOME}/shims:$PATH"
+ENV PATH="/home/${USERNAME}/.local/bin:/home/${USERNAME}/.local/share/mise/shims:$PATH"
+
+WORKDIR /app
+COPY --chown=${USER_UID}:${USER_GID} pyproject.toml poetry.lock .tool-versions ./
 
 RUN curl -sSf https://mise.run | sh
 
 RUN echo 'eval "$(mise activate bash)"' >> /home/${USERNAME}/.bashrc
 
-WORKDIR /app
-COPY --chown=${USER_UID}:${USER_GID} pyproject.toml poetry.lock .tool-versions ./
-
 # Installiere Python-Dependencies über mise und Poetry
 RUN mise install
-RUN mise run poetry install --no-root --sync --with dev \
-    # Berechtigungen für das Poetry Cache-Verzeichnis anpassen, falls nötig
+RUN mise exec -- poetry install --no-root --sync --with dev \
     && mkdir -p /home/${USERNAME}/.cache/pypoetry/virtualenvs \
     && chown -R ${USERNAME}:${USERNAME} /home/${USERNAME}/.cache/pypoetry \
     && chown -R ${USERNAME}:${USERNAME} ${MISE_HOME}
