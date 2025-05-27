@@ -121,18 +121,14 @@ echo "python $PYTHON_VERSION" > .tool-versions
 echo "poetry latest" >> .tool-versions # Füge Poetry hinzu, damit mise es verwaltet
 echo ".tool-versions für mise erstellt."
 
-# --- 2.6: Poetry.lock Datei generieren (auf dem Host mit mise!) ---
-# Da mise jetzt die Versionen verwaltet, können wir poetry darüber installieren
-# und dann poetry lock ausführen.
-echo -e "${YELLOW}Schritt 2.6: poetry.lock Datei generieren (via mise auf dem Host)...${NC}"
+# --- 2.6: Mise und Poetry auf dem Host installieren und Abhängigkeiten synchronisieren ---
+echo -e "${YELLOW}Schritt 2.6: Mise und Poetry auf dem Host installieren und Abhängigkeiten synchronisieren...${NC}"
 
 # Überprüfe, ob mise auf dem Host installiert ist
 if ! command -v mise &> /dev/null; then
     echo -e "${YELLOW}mise wurde auf Ihrem Host nicht gefunden. Versuche, mise zu installieren...${NC}"
-    # Standard-Installationsmethode für mise
     curl https://mise.run | sh
-    # Füge mise zum PATH hinzu, falls noch nicht geschehen (für die aktuelle Shell-Session)
-    export PATH="$HOME/.local/share/mise/bin:$PATH"
+    export PATH="$HOME/.local/share/mise/bin:$PATH" # Wichtig für die aktuelle Shell-Session
     echo -e "${GREEN}mise wurde installiert und zum PATH hinzugefügt.${NC}"
 else
     echo -e "${GREEN}mise ist bereits auf Ihrem Host installiert.${NC}"
@@ -149,7 +145,7 @@ echo "Python und Poetry über mise erfolgreich installiert."
 
 # Installiere Poetry-Abhängigkeiten auf dem Host
 echo "Installiere Poetry-Abhängigkeiten (einschließlich dev-Dependencies) auf dem Host..."
-mise run poetry install --sync --with dev
+mise exec bash -c "poetry install --sync --with dev"
 if [ $? -ne 0 ]; then
     echo -e "${RED}Fehler beim Installieren der Poetry-Abhängigkeiten auf dem Host. Überprüfen Sie Ihre pyproject.toml.${NC}"
     exit 1
@@ -157,7 +153,8 @@ fi
 echo "Poetry-Abhängigkeiten auf dem Host erfolgreich installiert."
 
 echo "Generiere oder aktualisiere poetry.lock mit mise poetry..."
-mise run poetry lock --no-update
+# Korrektur: Auch hier eine Unter-Shell nutzen
+mise exec bash -c "poetry lock --no-update"
 if [ $? -ne 0 ]; then
     echo -e "${RED}Fehler beim Generieren/Aktualisieren der poetry.lock Datei via mise. Überprüfen Sie Ihre Poetry-Installation und pyproject.toml.${NC}"
     exit 1
