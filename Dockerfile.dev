@@ -24,6 +24,7 @@ USER ${USERNAME}
 
 # Mise Installation für den appuser
 ENV PATH="/home/${USERNAME}/.local/bin:/home/${USERNAME}/.local/share/mise/shims:$PATH"
+ENV MISE_HOME="/home/${USERNAME}/.local/share/mise"
 
 WORKDIR /app
 COPY --chown=${USER_UID}:${USER_GID} pyproject.toml poetry.lock .tool-versions ./
