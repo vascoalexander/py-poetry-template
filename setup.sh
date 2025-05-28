@@ -252,7 +252,7 @@ echo ""
 echo -e "${YELLOW}Schritt 7: Pre-commit Hooks installieren (Host-seitig und via Docker)...${NC}"
 # Installiere den Pre-commit Client auf dem Host, damit die Git-Hooks funktionieren
 echo "Installiere 'pre-commit' Tool auf dem Host (falls noch nicht vorhanden)..."
-pip install pre-commit || { echo "Warnung: Konnte 'pre-commit' nicht auf dem Host installieren. Bitte manuell installieren: pip install pre-commit"; }
+pip install pre-commit || { echo "Warnung: Konnte 'pre-commit' nicht auf dem Host installieren. Bitte manuell installieren: pip install pre-commit"; false; }
 
 echo "Installiere Pre-commit Hooks in das Git Repository (host-seitig)..."
 # Dieser Befehl installiert die Git-Hooks (.git/hooks/pre-commit)
