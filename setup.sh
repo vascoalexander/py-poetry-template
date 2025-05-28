@@ -155,12 +155,12 @@ echo -e "${YELLOW}Schritt 2.6: Mise und Poetry auf dem Host installieren und Abh
 if ! command -v mise &> /dev/null; then
     echo -e "${YELLOW}mise wurde auf Ihrem Host nicht gefunden. Versuche, mise zu installieren...${NC}"
     curl https://mise.run | sh
-    export PATH="$HOME/.local/share/mise/bin:$PATH"
-    export PATH="$HOME/.local/bin:$PATH"
     echo -e "${GREEN}mise wurde installiert und zum PATH hinzugefügt.${NC}"
 else
     echo -e "${GREEN}mise ist bereits auf Ihrem Host installiert.${NC}"
 fi
+
+export PATH="$HOME/.local/share/mise/shims:$HOME/.local/share/mise/bin:$HOME/.local/bin:$PATH"
 
 # Installiere die im .tool-versions definierten Tools (Python, Poetry) mit mise
 echo "Installiere Python und Poetry über mise auf dem Host..."
@@ -172,18 +172,7 @@ fi
 echo "Python und Poetry über mise erfolgreich installiert."
 
 # Installiere Poetry-Abhängigkeiten auf dem Host
-
-# --- ZUSÄTZLICHE DEBUG-SCHRITTE ---
-echo "DEBUG: Aktueller PATH:"
-echo "$PATH"
-
-echo "DEBUG: Inhalt des mise shims Verzeichnisses ($HOME/.local/share/mise/shims/):"
-ls -la "$HOME/.local/share/mise/shims/"
-
-echo "DEBUG: Inhalt von .tool-versions:"
-cat .tool-versions
-# Debug ENDE
-
+export PATH="$HOME/.local/share/mise/shims:$PATH"
 echo "Installiere Poetry-Abhängigkeiten (einschließlich dev-Dependencies) auf dem Host..."
 poetry install --with dev
 if [ $? -ne 0 ]; then
