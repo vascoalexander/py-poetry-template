@@ -198,7 +198,7 @@ echo -e "${YELLOW}Schritt 6: Prüfe Docker-Berechtigungen und baue Docker Develo
 # Teste, ob der Benutzer Docker-Befehle ohne sudo ausführen kann
 # 'docker info' ist ein guter, harmloser Befehl, der die Berechtigungen prüft.
 if ! docker info &> /dev/null; then
-    echo -e "${RED}Fehler: Ihr Benutzer hat keine Berechtigung, Docker-Befehle auszuführen (ohne sudo).${NC}"
+    echo -e "${RED}Fehler: Ihr Benutzer hat keine Berechtigung, Docker-Befehle auszuführen (ohne sudo). Ist Docker installiert?${NC}"
     echo -e "${YELLOW}Bitte fügen Sie Ihren Benutzer zur 'docker'-Gruppe hinzu, indem Sie diesen Befehl ausführen:${NC}"
     echo -e "${YELLOW}   sudo usermod -aG docker $USER${NC}"
     echo -e "${YELLOW}Nachdem Sie diesen Befehl ausgeführt haben, melden Sie sich BITTE VOLLSTÄNDIG AB und wieder AN (oder starten Sie Ihren Computer neu), damit die Änderungen wirksam werden.${NC}"
