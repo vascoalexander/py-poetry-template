@@ -260,7 +260,7 @@ echo "Host-seitige Pre-commit Hooks installiert."
 # Dies stellt sicher, dass alle initialen Formatierungen und Checks angewendet werden
 echo "Führe erste Pre-commit Checks aus (dies kann Dateien ändern)..."
 # Hier rufen wir das 'just' Kommando auf, um die Checks IM CONTAINER auszuführen
-make pre
+pre-commit run --all-files || true
 echo "Initialer Pre-commit-Lauf abgeschlossen."
 echo ""
 
