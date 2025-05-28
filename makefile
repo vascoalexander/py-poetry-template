@@ -56,7 +56,7 @@ shell: build
 	docker run -it --rm \
 		-e PATH=$(CONTAINER_PATH) \
 		-u $(HOST_UID):$(HOST_GID) \
-		-v $(PWD):/workspace \
+		-v $(PWD):/workspace:z \
 		-w /workspace \
 		$(IMAGE_TAG) bash
 
@@ -64,7 +64,7 @@ test: build
 	docker run --rm \
 		-e PATH=$(CONTAINER_PATH) \
 		-u $(HOST_UID):$(HOST_GID) \
-		-v $(PWD):/workspace \
+		-v $(PWD):/workspace:z \
 		-w /workspace \
 		$(IMAGE_TAG) \
 		mise exec -- poetry run pytest tests
@@ -73,7 +73,7 @@ coverage: build
 	docker run --rm \
 		-e PATH=$(CONTAINER_PATH) \
 		-u $(HOST_UID):$(HOST_GID) \
-		-v $(PWD):/workspace \
+		-v $(PWD):/workspace:z \
 		-w /workspace \
 		$(IMAGE_TAG) \
 		mise exec -- poetry run pytest --cov=src --cov-report=term-missing
@@ -85,7 +85,7 @@ coverage-html: build
 	docker run --rm \
 		-e PATH=$(CONTAINER_PATH) \
 		-u $(HOST_UID):$(HOST_GID) \
-		-v $(PWD):/workspace \
+		-v $(PWD):/workspace:z \
 		-w /workspace \
 		$(IMAGE_TAG) \
 		bash -c "\
@@ -99,7 +99,7 @@ run: build
 	docker run --rm \
 		-e PATH=$(CONTAINER_PATH) \
 		-u $(HOST_UID):$(HOST_GID) \
-		-v $(PWD):/workspace \
+		-v $(PWD):/workspace:z \
 		-w /workspace \
 		$(IMAGE_TAG) \
 		mise exec -- poetry run python src/$(PACKAGE_NAME)/main.py
