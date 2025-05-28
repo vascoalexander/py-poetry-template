@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
@@ -13,80 +15,12 @@ DEFAULT_PYTHON_VERSION="3.12"
 MIN_PYTHON_MAJOR=3
 MIN_PYTHON_MINOR=9
 
-# Ganz am Anfang des Skripts, nach den Farbdefinitionen und 'set -euo pipefail'
-
-# --- Temporäre Dateien und Cleanup ---
-TEMP_DIR="" # Global, damit es in cleanup zugänglich ist
-SCRIPT_EXIT_CODE=0 # Speichert den Exit-Code des Skripts
-
-# Cleanup-Funktion
 cleanup() {
-    local last_exit_code=$SCRIPT_EXIT_CODE # Den letzten gespeicherten Exit-Code verwenden
-
-    echo -e "${YELLOW}Führe Aufräumarbeiten durch...${NC}"
-
-    # Entferne immer die .bak-Dateien
-    if [ -f "pyproject.toml.bak" ]; then
-        rm -f "pyproject.toml.bak"
-        echo "Entfernte pyproject.toml.bak."
-    fi
-
-    if [ -n "$TEMP_DIR" ] && [ -d "$TEMP_DIR" ]; then
-        if [ "$last_exit_code" -ne 0 ]; then
-            echo -e "${RED}Skript mit Fehler abgebrochen (Exit-Code: $last_exit_code). Stelle gesicherte Dateien wieder her...${NC}"
-            # Stellen Sie hier nur Dateien wieder her, die tatsächlich in TEMP_DIR gesichert wurden
-            if [ -f "$TEMP_DIR/pyproject.toml" ]; then
-                cp -f "$TEMP_DIR/pyproject.toml" pyproject.toml || echo -e "${RED}Fehler beim Wiederherstellen von pyproject.toml.${NC}"
-            fi
-            if [ -f "$TEMP_DIR/.tool-versions" ]; then
-                cp -f "$TEMP_DIR/.tool-versions" .tool-versions || echo -e "${RED}Fehler beim Wiederherstellen von .tool-versions.${NC}"
-            fi
-
-            # WIEDERHERSTELLUNG des umbenannten Ordners
-            if [ -d "$TEMP_DIR/$OLD_PACKAGE_NAME.bak_dir" ]; then
-                echo -e "${RED}Stelle alten Paketordner 'src/$OLD_PACKAGE_NAME' wieder her...${NC}"
-                # Wenn der neue Ordner existiert (unvollständige Umbenennung oder Erstellung), löschen wir ihn
-                if [ -d "src/$PACKAGE_NAME" ]; then
-                    echo -e "${YELLOW}Entferne unvollständigen/neuen Paketordner 'src/$PACKAGE_NAME' vor Wiederherstellung.${NC}"
-                    rm -rf "src/$PACKAGE_NAME" || echo -e "${RED}Fehler beim Entfernen von 'src/$PACKAGE_NAME'.${NC}"
-                fi
-                # Bewege die gesicherte Version zurück
-                mv "$TEMP_DIR/$OLD_PACKAGE_NAME.bak_dir" "src/$OLD_PACKAGE_NAME" || echo -e "${RED}Fehler beim Wiederherstellen von src/$OLD_PACKAGE_NAME aus Sicherung.${NC}"
-            fi
-
-            echo -e "${GREEN}Wiederherstellung abgeschlossen.${NC}"
-        else
-            echo -e "${GREEN}Skript erfolgreich abgeschlossen. Lösche temporäre Sicherungen...${NC}"
-        fi
-        rm -rf "$TEMP_DIR" || echo -e "${RED}Fehler beim Löschen des temporären Verzeichnisses '$TEMP_DIR'.${NC}"
-        echo "Temporäres Verzeichnis '$TEMP_DIR' gelöscht."
-    fi
+    echo -e "${RED}Ein Fehler ist aufgetreten. Räume auf...${NC}"
+    rm -rf src .env .tool-versions
 }
-# Setze den Trap VOR dem Start des Skripts, um auch Fehler beim TEMP_DIR-Erstellen abzufangen
-trap 'SCRIPT_EXIT_CODE=$?; cleanup; exit $SCRIPT_EXIT_CODE' EXIT
 
-# Erstelle ein temporäres Verzeichnis für Sicherungen
-echo -e "${YELLOW}Erstelle temporäres Verzeichnis für Dateisicherungen...${NC}"
-TEMP_DIR=$(mktemp -d -t python_setup_XXXXXX)
-echo "Temporäres Verzeichnis: $TEMP_DIR"
-
-# Dateien sichern, bevor sie geändert werden
-echo -e "${YELLOW}Sichere kritische Dateien in '$TEMP_DIR'...${NC}"
-cp pyproject.toml "$TEMP_DIR/"
-cp .tool-versions "$TEMP_DIR/"
-
-# SICHERUNG des alten Paketordners VOR der Umbenennung
-if [ -d "src/$OLD_PACKAGE_NAME" ]; then
-    cp -r "src/$OLD_PACKAGE_NAME" "$TEMP_DIR/$OLD_PACKAGE_NAME.bak_dir"
-    echo "Alter Paketordner 'src/$OLD_PACKAGE_NAME' gesichert."
-fi
-
-echo "Dateien erfolgreich gesichert."
-echo ""
-
-echo -e "${GREEN}--- Python Project Setup ---${NC}"
-echo "Dieses Skript hilft Ihnen, Ihr neues Python-Projekt einzurichten."
-echo ""
+trap 'cleanup' ERR
 
 # --- 1. Projektinformationen abfragen ---
 echo -e "${YELLOW}Schritt 1: Projektinformationen${NC}"
@@ -182,24 +116,9 @@ sed -i.bak "s/^version = \".*\"/version = \"0.1.0\"/" pyproject.toml
 sed -i.bak "s/^description = \".*\"/description = \"$PROJECT_DESCRIPTION\"/" pyproject.toml
 sed -i.bak "s/^authors = \[.*\]/authors = [\"$AUTHOR_NAME <$AUTHOR_EMAIL>\"]/" pyproject.toml
 sed -i.bak "s/^python = \"\^.*\"/python = \"^$PYTHON_VERSION\"/" pyproject.toml
-sed -i.bak "/^readme = \".*\"/a packages = [{include = \"$PACKAGE_NAME\", from = \"src\"}]" pyproject.toml
+sed -i.bak "s|^packages = .*|packages = [{include = \"${PACKAGE_NAME}\", from = \"src\"}]|" pyproject.toml
 rm -f pyproject.toml.bak
 echo "pyproject.toml wurde aktualisiert."
-
-# --- 3. Ordnerstruktur und __init__.py anpassen ---
-echo -e "${YELLOW}Schritt 3: Ordnerstruktur und Python-Dateien anpassen...${NC}"
-OLD_PACKAGE_NAME="my_project_name"
-
-if [ -d "src/$OLD_PACKAGE_NAME" ]; then
-    mv "src/$OLD_PACKAGE_NAME" "src/$PACKAGE_NAME"
-    echo "src/$OLD_PACKAGE_NAME in src/$PACKAGE_NAME umbenannt."
-else
-    echo -e "${YELLOW}Warnung: Alter Paketordner 'src/$OLD_PACKAGE_NAME' nicht gefunden. Überspringe Umbenennung.${NC}"
-    if [ ! -d "src/$PACKAGE_NAME" ]; then
-        echo -e "${RED}Fehler: Weder alter noch neuer Paketordner in 'src/' gefunden. Bitte manuell anlegen oder umbenennen.${NC}"
-        exit 1
-    fi
-fi
 
 # Erstelle oder aktualisiere __init__.py
 INIT_PY_CONTENT="from importlib.metadata import PackageNotFoundError, version\n\ntry:\n    __version__ = version(\"$PACKAGE_NAME\")\nexcept PackageNotFoundError:\n    __version__ = \"unknown\"\n"
@@ -235,41 +154,25 @@ export PATH="$HOME/.local/share/mise/shims:$HOME/.local/share/mise/bin:$HOME/.lo
 
 # Installiere die im .tool-versions definierten Tools (Python, Poetry) mit mise
 echo "Installiere Python und Poetry über mise auf dem Host..."
-mise install
-if [ $? -ne 0 ]; then
-    echo -e "${RED}Fehler: Konnte Python und/oder Poetry nicht mit mise installieren. Bitte prüfen Sie Ihre mise-Installation und .tool-versions.${NC}"
-    exit 1
-fi
+mise install || { echo -e "${RED}Fehler: Konnte Python und/oder Poetry nicht mit mise installieren. Bitte prüfen Sie Ihre mise-Installation und .tool-versions.${NC}"; false; }
 echo "Python und Poetry über mise erfolgreich installiert."
 
 # Installiere Poetry-Abhängigkeiten auf dem Host
 export PATH="$HOME/.local/share/mise/shims:$PATH"
 echo "Installiere Poetry-Abhängigkeiten (einschließlich dev-Dependencies) auf dem Host..."
-poetry install --with dev
-if [ $? -ne 0 ]; then
-    echo -e "${RED}Fehler beim Installieren der Poetry-Abhängigkeiten auf dem Host. Überprüfen Sie Ihre pyproject.toml.${NC}"
-    exit 1
-fi
+poetry install --with dev || { echo -e "${RED}Fehler beim Installieren der Poetry-Abhängigkeiten auf dem Host. Überprüfen Sie Ihre pyproject.toml.${NC}"; false; }
 echo "Poetry-Abhängigkeiten auf dem Host erfolgreich installiert."
 
 echo "Generiere oder aktualisiere poetry.lock mit mise poetry..."
 # Korrektur: Auch hier eine Unter-Shell nutzen
-poetry lock
-if [ $? -ne 0 ]; then
-    echo -e "${RED}Fehler beim Generieren/Aktualisieren der poetry.lock Datei via mise. Überprüfen Sie Ihre Poetry-Installation und pyproject.toml.${NC}"
-    exit 1
-fi
+poetry lock || { echo -e "${RED}Fehler beim Generieren/Aktualisieren der poetry.lock Datei via mise. Überprüfen Sie Ihre Poetry-Installation und pyproject.toml.${NC}"; false; }
 echo "poetry.lock erfolgreich generiert/aktualisiert."
 echo ""
 
 # --- 5. Git-Initialisierung und erster Commit ---
 echo -e "${YELLOW}Schritt 5.5: Git-Repository initialisieren und erster Commit...${NC}"
 if [ ! -d ".git" ]; then
-    git init
-    if [ $? -ne 0 ]; then
-        echo -e "${RED}Fehler beim Initialisieren des Git-Repositorys. Stellen Sie sicher, dass Git installiert ist.${NC}"
-        exit 1
-    fi
+    git init || { echo -e "${RED}Fehler beim Initialisieren des Git-Repositorys. Stellen Sie sicher, dass Git installiert ist.${NC}"; false; }
     echo "Git-Repository initialisiert."
 
     # Initialer Commit
@@ -297,18 +200,14 @@ if ! docker info &> /dev/null; then
     echo -e "${YELLOW}   sudo usermod -aG docker $USER${NC}"
     echo -e "${YELLOW}Nachdem Sie diesen Befehl ausgeführt haben, melden Sie sich BITTE VOLLSTÄNDIG AB und wieder AN (oder starten Sie Ihren Computer neu), damit die Änderungen wirksam werden.${NC}"
     echo -e "${YELLOW}Versuchen Sie dann, das Setup-Skript erneut auszuführen.${NC}"
-    exit 1 # Skript abbrechen, da Docker-Build ohne Berechtigungen nicht funktionieren wird.
+    false # Skript abbrechen, da Docker-Build ohne Berechtigungen nicht funktionieren wird.
 fi
 
 # --- 6.1 Sicherstellen, dass Docker Buildx installiert und aktuell ist ---
 echo -e "${YELLOW}Schritt 6a: Prüfe und installiere/aktualisiere Docker Buildx...${NC}"
 if ! docker buildx version &> /dev/null; then
     echo -e "${RED}Docker Buildx wurde nicht gefunden. Versuche, es zu installieren.${NC}"
-    docker buildx install
-    if [ $? -ne 0 ]; then
-        echo -e "${RED}Fehler: Konnte Docker Buildx nicht installieren. Bitte installieren Sie Buildx manuell (${YELLOW}https://docs.docker.com/buildx/install/${RED}) und versuchen Sie es erneut.${NC}"
-        exit 1
-    fi
+    docker buildx install || { echo -e "${RED}Fehler: Konnte Docker Buildx nicht installieren. Bitte installieren Sie Buildx manuell (${YELLOW}https://docs.docker.com/buildx/install/${RED}) und versuchen Sie es erneut.${NC}"; false; }
     echo -e "${GREEN}Docker Buildx erfolgreich installiert.${NC}"
 else
     # Prüfe die Buildx-Version auf Kompatibilität mit --load (hinzugefügt in v0.6.0)
@@ -325,11 +224,7 @@ else
     if [ "$BUILDX_VER_NUM" -lt "000006000" ]; then
         echo -e "${RED}Ihre Docker Buildx-Version ($BUILDX_VERSION_RAW) ist veraltet und unterstützt die '--load'-Option möglicherweise nicht.${NC}"
         echo -e "${YELLOW}Versuche, Buildx zu aktualisieren...${NC}"
-        docker buildx install
-        if [ $? -ne 0 ]; then
-            echo -e "${RED}Fehler: Konnte Docker Buildx nicht aktualisieren. Bitte aktualisieren Sie Buildx manuell (${YELLOW}https://docs.docker.com/buildx/install/${RED}) und versuchen Sie es erneut.${NC}"
-            exit 1
-        fi
+        docker buildx install || { echo -e "${RED}Fehler: Konnte Docker Buildx nicht aktualisieren. Bitte aktualisieren Sie Buildx manuell (${YELLOW}https://docs.docker.com/buildx/install/${RED}) und versuchen Sie es erneut.${NC}"; false; }
         echo -e "${GREEN}Docker Buildx erfolgreich aktualisiert.${NC}"
     else
         echo -e "${GREEN}Docker Buildx ist bereits installiert und aktuell (${BUILDX_VERSION_RAW}).${NC}"
@@ -341,14 +236,14 @@ echo -e "${YELLOW}Schritt 7: Docker Development Image bauen...${NC}"
 echo "Starte den Build des Docker-Images (dies kann einen Moment dauern)..."
 if ! command -v make &> /dev/null; then
     echo -e "${RED}Fehler: 'make' Befehl nicht gefunden. Bitte installieren Sie 'make' (z.B. sudo apt install make).${NC}"
-    exit 1
+    false
 fi
 
 PYTHON_VERSION="$PYTHON_VERSION" make build
 
 if [ $? -ne 0 ]; then
     echo -e "${RED}Fehler beim Bauen des Docker-Images. Überprüfen Sie Ihr Dockerfile.dev und die 'make' Ausgabe.${NC}"
-    exit 1
+    false
 fi
 echo "Docker Development Image erfolgreich gebaut!"
 echo ""
