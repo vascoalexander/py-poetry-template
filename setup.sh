@@ -155,7 +155,8 @@ echo -e "${YELLOW}Schritt 2.6: Mise und Poetry auf dem Host installieren und Abh
 if ! command -v mise &> /dev/null; then
     echo -e "${YELLOW}mise wurde auf Ihrem Host nicht gefunden. Versuche, mise zu installieren...${NC}"
     curl https://mise.run | sh
-    export PATH="$HOME/.local/share/mise/bin:$PATH" # Wichtig für die aktuelle Shell-Session
+    export PATH="$HOME/.local/share/mise/bin:$PATH"
+    export PATH="$HOME/.local/bin:$PATH"
     echo -e "${GREEN}mise wurde installiert und zum PATH hinzugefügt.${NC}"
 else
     echo -e "${GREEN}mise ist bereits auf Ihrem Host installiert.${NC}"
