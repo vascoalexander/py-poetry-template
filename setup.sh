@@ -17,7 +17,10 @@ MIN_PYTHON_MINOR=9
 
 cleanup() {
     echo -e "${RED}Ein Fehler ist aufgetreten. Räume auf...${NC}"
-    rm -rf src .env .tool-versions
+    # Check if files/directories exist before attempting to remove them
+    [ -d "src" ] && rm -rf src
+    [ -f ".env" ] && rm -f .env
+    [ -f ".tool-versions" ] && rm -f .tool-versions
 }
 
 trap 'cleanup' ERR
@@ -121,7 +124,7 @@ rm -f pyproject.toml.bak
 echo "pyproject.toml wurde aktualisiert."
 
 # Erstelle oder aktualisiere __init__.py
-INIT_PY_CONTENT="from importlib.metadata import PackageNotFoundError, version\n\ntry:\n    __version__ = version(\"$PACKAGE_NAME\")\nexcept PackageNotFoundError:\n    __version__ = \"unknown\"\n"
+INIT_PY_CONTENT="from importlib.metadata import PackageNotFoundError, version\n\n\ntry:\n    __version__ = version(\"$PACKAGE_NAME\")\nexcept PackageNotFoundError:\n    __version__ = \"unknown\"\n"
 mkdir -p "src/$PACKAGE_NAME"
 echo -e "$INIT_PY_CONTENT" > "src/$PACKAGE_NAME/__init__.py"
 echo "src/$PACKAGE_NAME/__init__.py wurde erstellt/aktualisiert."
@@ -249,18 +252,7 @@ echo "Docker Development Image erfolgreich gebaut!"
 echo ""
 
 # --- 7. Pre-commit Hooks installieren (Host-seitig) ---
-# Check if ~/.local/bin exists and is not already in PATH
-#if [ -d "$HOME/.local/share/mise/installs" ] && [[ ":$PATH:" != *":$HOME/.local/share/mise/installs:"* ]]; then
-#    export PATH="$HOME/.local/share/mise/installs:$PATH"
-#    echo -e "${GREEN}Added $HOME/.local/bin to PATH.${NC}"
-#fi
-
 echo -e "${YELLOW}Schritt 7: Pre-commit Hooks installieren (Host-seitig und via Docker)...${NC}"
-# Installiere den Pre-commit Client auf dem Host, damit die Git-Hooks funktionieren
-#echo "Installiere 'pre-commit' Tool auf dem Host (falls noch nicht vorhanden)..."
-#pip install pre-commit || { echo "Warnung: Konnte 'pre-commit' nicht auf dem Host installieren. Bitte manuell installieren: pip install pre-commit"; false; }
-
-echo "Installiere Pre-commit Hooks in das Git Repository (host-seitig)..."
 # Dieser Befehl installiert die Git-Hooks (.git/hooks/pre-commit)
 poetry run pre-commit install
 if [ $? -ne 0 ]; then
