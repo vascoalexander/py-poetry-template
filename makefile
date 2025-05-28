@@ -42,7 +42,7 @@ help:
 build:
 	@echo "Building Docker development image: $(IMAGE_TAG) with Python $(PYTHON_VERSION)..."
 	docker buildx build \
-		--load \       
+		--load \
 		-f Dockerfile.dev \
 		-t $(IMAGE_TAG) \
 		--build-arg PYTHON_VERSION=$(PYTHON_VERSION) \
