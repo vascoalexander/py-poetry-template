@@ -172,7 +172,7 @@ echo "Python und Poetry über mise erfolgreich installiert."
 
 # Installiere Poetry-Abhängigkeiten auf dem Host
 echo "Installiere Poetry-Abhängigkeiten (einschließlich dev-Dependencies) auf dem Host..."
-mise exec bash -c "poetry install --sync --with dev"
+mise exec poetry -- install --sync --with dev
 if [ $? -ne 0 ]; then
     echo -e "${RED}Fehler beim Installieren der Poetry-Abhängigkeiten auf dem Host. Überprüfen Sie Ihre pyproject.toml.${NC}"
     exit 1
@@ -181,7 +181,7 @@ echo "Poetry-Abhängigkeiten auf dem Host erfolgreich installiert."
 
 echo "Generiere oder aktualisiere poetry.lock mit mise poetry..."
 # Korrektur: Auch hier eine Unter-Shell nutzen
-mise exec bash -c "poetry lock"
+mise exec poetry -- lock
 if [ $? -ne 0 ]; then
     echo -e "${RED}Fehler beim Generieren/Aktualisieren der poetry.lock Datei via mise. Überprüfen Sie Ihre Poetry-Installation und pyproject.toml.${NC}"
     exit 1
@@ -234,15 +234,10 @@ echo ""
 echo -e "${YELLOW}Schritt 7: Pre-commit Hooks installieren (Host-seitig und via Docker)...${NC}"
 # Installiere den Pre-commit Client auf dem Host, damit die Git-Hooks funktionieren
 echo "Installiere 'pre-commit' Tool auf dem Host (falls noch nicht vorhanden)..."
-pip install pre-commit || { echo "Warnung: Konnte 'pre-commit' nicht auf dem Host installieren. Bitte manuell installieren: pip install pre-commit"; }
-
-echo "Installiere Pre-commit Hooks in das Git Repository (host-seitig)..."
-# Dieser Befehl installiert die Git-Hooks (.git/hooks/pre-commit)
-pre-commit install
-if [ $? -ne 0 ]; then
-    echo -e "${RED}Fehler beim Installieren der host-seitigen pre-commit Hooks.${NC}"
+mise exec poetry -- run pre-commit install || {
+    echo -e "${RED}Fehler: Konnte pre-commit Hooks nicht über Poetry installieren. Prüfe deine Poetry-Installation und pyproject.toml.${NC}"
     exit 1
-fi
+}
 echo "Host-seitige Pre-commit Hooks installiert."
 
 # Optional: Führe einen ersten Lauf der pre-commit Hooks direkt nach der Installation aus
