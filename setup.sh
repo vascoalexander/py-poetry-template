@@ -13,6 +13,60 @@ DEFAULT_PYTHON_VERSION="3.12"
 MIN_PYTHON_MAJOR=3
 MIN_PYTHON_MINOR=9
 
+# Ganz am Anfang des Skripts, nach den Farbdefinitionen und 'set -euo pipefail'
+
+# --- Temporäre Dateien und Cleanup ---
+TEMP_DIR="" # Global, damit es in cleanup zugänglich ist
+
+# Cleanup-Funktion
+cleanup() {
+    echo -e "${YELLOW}Führe Aufräumarbeiten durch...${NC}"
+    if [ -n "$TEMP_DIR" ] && [ -d "$TEMP_DIR" ]; then
+        if [ $? -ne 0 ]; then # Prüft den Exit-Code des Skripts
+            echo -e "${RED}Skript mit Fehler abgebrochen. Stelle gesicherte Dateien wieder her...${NC}"
+            # Hier kopieren wir die originalen Dateien zurück
+            cp -f "$TEMP_DIR/pyproject.toml" pyproject.toml || echo -e "${RED}Fehler beim Wiederherstellen von pyproject.toml.${NC}"
+            cp -f "$TEMP_DIR/.tool-versions" .tool-versions || echo -e "${RED}Fehler beim Wiederherstellen von .tool-versions.${NC}"
+            cp -f "$TEMP_DIR"/src/ . || echo -e "${RED}Fehler beim Wiederherstellen von .tool-versions.${NC}"
+            # Weitere zu sichernde Dateien hier hinzufügen:
+            # cp -f "$TEMP_DIR/src/my_project_name/__init__.py" src/my_project_name/__init__.py # Nur, wenn init.py auch vom Skript überschrieben wurde und wiederhergestellt werden soll.
+            # ...
+        else
+            echo -e "${GREEN}Skript erfolgreich abgeschlossen. Lösche temporäre Sicherungen...${NC}"
+        fi
+        rm -rf "$TEMP_DIR" || echo -e "${RED}Fehler beim Löschen des temporären Verzeichnisses '$TEMP_DIR'.${NC}"
+        echo "Temporäres Verzeichnis '$TEMP_DIR' gelöscht."
+    fi
+    # pyproject.toml.bak wird immer gelöscht, unabhängig vom Skript-Exit-Code
+    if [ -f "pyproject.toml.bak" ]; then
+        rm -f "pyproject.toml.bak"
+        echo "Entfernte pyproject.toml.bak."
+    fi
+}
+trap cleanup EXIT # Führt cleanup-Funktion beim Beenden des Skripts aus
+
+# Erstelle ein temporäres Verzeichnis für Sicherungen
+echo -e "${YELLOW}Erstelle temporäres Verzeichnis für Dateisicherungen...${NC}"
+TEMP_DIR=$(mktemp -d -t python_setup_XXXXXX)
+if [ $? -ne 0 ]; then
+    echo -e "${RED}Fehler: Konnte temporäres Verzeichnis nicht erstellen.${NC}"
+    exit 1
+fi
+echo "Temporäres Verzeichnis: $TEMP_DIR"
+
+# Dateien sichern, bevor sie geändert werden
+echo -e "${YELLOW}Sichere kritische Dateien in '$TEMP_DIR'...${NC}"
+cp pyproject.toml "$TEMP_DIR/" || { echo -e "${RED}Fehler: Konnte pyproject.toml nicht sichern.${NC}"; exit 1; }
+cp .tool-versions "$TEMP_DIR/" || { echo -e "${RED}Fehler: Konnte .tool-versions nicht sichern.${NC}"; exit 1; }
+cp src/ "$TEMP_DIR/" || { echo -e "${RED}Fehler: Konnte src/ nicht sichern.${NC}"; exit 1; }
+# Sichern Sie hier JEDE Datei, die Ihr Skript modifiziert oder löscht!
+# z.B. wenn src/my_project_name umbenannt wird, sichern Sie den gesamten src/my_project_name Ordner!
+# cp -r src/my_project_name "$TEMP_DIR/" # Wenn dieser Ordner manipuliert wird
+# ... weitere relevante Dateien sichern ...
+
+echo "Dateien erfolgreich gesichert."
+echo ""
+
 echo -e "${GREEN}--- Python Project Setup ---${NC}"
 echo "Dieses Skript hilft Ihnen, Ihr neues Python-Projekt einzurichten."
 echo ""
