@@ -118,5 +118,3 @@ check: lint
 pre-commit:
 	@echo "Running pre-commit hooks on host via poetry..."
 	poetry run pre-commit run --all-files
-
-
