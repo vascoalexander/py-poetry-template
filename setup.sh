@@ -250,10 +250,10 @@ echo ""
 
 # --- 7. Pre-commit Hooks installieren (Host-seitig) ---
 # Check if ~/.local/bin exists and is not already in PATH
-if [ -d "$HOME/.local/share/mise/installs" ] && [[ ":$PATH:" != *":$HOME/.local/share/mise/installs:"* ]]; then
-    export PATH="$HOME/.local/share/mise/installs:$PATH"
-    echo -e "${GREEN}Added $HOME/.local/bin to PATH.${NC}"
-fi
+#if [ -d "$HOME/.local/share/mise/installs" ] && [[ ":$PATH:" != *":$HOME/.local/share/mise/installs:"* ]]; then
+#    export PATH="$HOME/.local/share/mise/installs:$PATH"
+#    echo -e "${GREEN}Added $HOME/.local/bin to PATH.${NC}"
+#fi
 
 echo -e "${YELLOW}Schritt 7: Pre-commit Hooks installieren (Host-seitig und via Docker)...${NC}"
 # Installiere den Pre-commit Client auf dem Host, damit die Git-Hooks funktionieren
@@ -262,7 +262,7 @@ echo -e "${YELLOW}Schritt 7: Pre-commit Hooks installieren (Host-seitig und via 
 
 echo "Installiere Pre-commit Hooks in das Git Repository (host-seitig)..."
 # Dieser Befehl installiert die Git-Hooks (.git/hooks/pre-commit)
-pre-commit install
+poetry run pre-commit install
 if [ $? -ne 0 ]; then
     echo -e "${RED}Fehler beim Installieren der host-seitigen pre-commit Hooks.${NC}"
 fi
@@ -271,7 +271,7 @@ echo "Host-seitige Pre-commit Hooks installiert."
 # Optional: Führe einen ersten Lauf der pre-commit Hooks direkt nach der Installation aus
 # Dies stellt sicher, dass alle initialen Formatierungen und Checks angewendet werden
 echo "Führe erste Pre-commit Checks aus (dies kann Dateien ändern)..."
-pre-commit run --all-files || true
+poetry run pre-commit run --all-files || true
 echo "Initialer Pre-commit-Lauf abgeschlossen."
 echo ""
 
