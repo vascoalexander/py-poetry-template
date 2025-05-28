@@ -148,7 +148,7 @@ echo "python $PYTHON_VERSION" > .tool-versions
 echo "poetry 1.8.2" >> .tool-versions
 echo ".tool-versions für mise erstellt."
 
-# --- 4.5: Mise und Poetry auf dem Host installieren und Abhängigkeiten synchronisieren ---
+# --- 4.1: Mise und Poetry auf dem Host installieren und Abhängigkeiten synchronisieren ---
 echo -e "${YELLOW}Schritt 2.6: Mise und Poetry auf dem Host installieren und Abhängigkeiten synchronisieren...${NC}"
 
 # Überprüfe, ob mise auf dem Host installiert ist
@@ -229,7 +229,43 @@ if ! docker info &> /dev/null; then
     exit 1 # Skript abbrechen, da Docker-Build ohne Berechtigungen nicht funktionieren wird.
 fi
 
-# --- 6.5 Docker Image bauen ---
+# --- 6.1 Sicherstellen, dass Docker Buildx installiert und aktuell ist ---
+echo -e "${YELLOW}Schritt 6a: Prüfe und installiere/aktualisiere Docker Buildx...${NC}"
+if ! docker buildx version &> /dev/null; then
+    echo -e "${RED}Docker Buildx wurde nicht gefunden. Versuche, es zu installieren.${NC}"
+    docker buildx install
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}Fehler: Konnte Docker Buildx nicht installieren. Bitte installieren Sie Buildx manuell (${YELLOW}https://docs.docker.com/buildx/install/${RED}) und versuchen Sie es erneut.${NC}"
+        exit 1
+    fi
+    echo -e "${GREEN}Docker Buildx erfolgreich installiert.${NC}"
+else
+    # Prüfe die Buildx-Version auf Kompatibilität mit --load (hinzugefügt in v0.6.0)
+    BUILDX_VERSION_RAW=$(docker buildx version 2>&1 | grep -oP 'v\d+\.\d+\.\d+' | head -1)
+    # Extrahiere Major, Minor, Patch für numerischen Vergleich
+    BUILDX_MAJOR=$(echo "$BUILDX_VERSION_RAW" | cut -d'.' -f1 | tr -d 'v')
+    BUILDX_MINOR=$(echo "$BUILDX_VERSION_RAW" | cut -d'.' -f2)
+    BUILDX_PATCH=$(echo "$BUILDX_VERSION_RAW" | cut -d'.' -f3)
+
+    # Konvertiere in ein vergleichbares Zahlenformat (z.B. v0.6.0 -> 000006000)
+    BUILDX_VER_NUM=$(printf "%03d%03d%03d" "$BUILDX_MAJOR" "$BUILDX_MINOR" "$BUILDX_PATCH")
+
+    # Prüfe, ob die Version kleiner als 0.6.0 ist
+    if [ "$BUILDX_VER_NUM" -lt "000006000" ]; then
+        echo -e "${RED}Ihre Docker Buildx-Version ($BUILDX_VERSION_RAW) ist veraltet und unterstützt die '--load'-Option möglicherweise nicht.${NC}"
+        echo -e "${YELLOW}Versuche, Buildx zu aktualisieren...${NC}"
+        docker buildx install
+        if [ $? -ne 0 ]; then
+            echo -e "${RED}Fehler: Konnte Docker Buildx nicht aktualisieren. Bitte aktualisieren Sie Buildx manuell (${YELLOW}https://docs.docker.com/buildx/install/${RED}) und versuchen Sie es erneut.${NC}"
+            exit 1
+        fi
+        echo -e "${GREEN}Docker Buildx erfolgreich aktualisiert.${NC}"
+    else
+        echo -e "${GREEN}Docker Buildx ist bereits installiert und aktuell (${BUILDX_VERSION_RAW}).${NC}"
+    fi
+fi
+
+# --- 6.2 Docker Image bauen ---
 echo -e "${YELLOW}Schritt 7: Docker Development Image bauen...${NC}"
 echo "Starte den Build des Docker-Images (dies kann einen Moment dauern)..."
 if ! command -v make &> /dev/null; then

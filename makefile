@@ -41,13 +41,15 @@ help:
 
 build:
 	@echo "Building Docker development image: $(IMAGE_TAG) with Python $(PYTHON_VERSION)..."
-	docker build \
+	docker buildx build \
+		--load \       
 		-f Dockerfile.dev \
 		-t $(IMAGE_TAG) \
 		--build-arg PYTHON_VERSION=$(PYTHON_VERSION) \
 		--build-arg USER_UID=$(shell id -u) \
 		--build-arg USER_GID=$(shell id -g) \
 		.
+
 # Tasks that run INSIDE the Docker Container
 
 shell: build
