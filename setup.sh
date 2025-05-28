@@ -17,52 +17,69 @@ MIN_PYTHON_MINOR=9
 
 # --- Temporäre Dateien und Cleanup ---
 TEMP_DIR="" # Global, damit es in cleanup zugänglich ist
+SCRIPT_EXIT_CODE=0 # Speichert den Exit-Code des Skripts
 
 # Cleanup-Funktion
 cleanup() {
+    local last_exit_code=$SCRIPT_EXIT_CODE # Den letzten gespeicherten Exit-Code verwenden
+
     echo -e "${YELLOW}Führe Aufräumarbeiten durch...${NC}"
+
+    # Entferne immer die .bak-Dateien
+    if [ -f "pyproject.toml.bak" ]; then
+        rm -f "pyproject.toml.bak"
+        echo "Entfernte pyproject.toml.bak."
+    fi
+
     if [ -n "$TEMP_DIR" ] && [ -d "$TEMP_DIR" ]; then
-        if [ $? -ne 0 ]; then # Prüft den Exit-Code des Skripts
-            echo -e "${RED}Skript mit Fehler abgebrochen. Stelle gesicherte Dateien wieder her...${NC}"
-            # Hier kopieren wir die originalen Dateien zurück
-            cp -f "$TEMP_DIR/pyproject.toml" pyproject.toml || echo -e "${RED}Fehler beim Wiederherstellen von pyproject.toml.${NC}"
-            cp -f "$TEMP_DIR/.tool-versions" .tool-versions || echo -e "${RED}Fehler beim Wiederherstellen von .tool-versions.${NC}"
-            cp -f "$TEMP_DIR"/src/ . || echo -e "${RED}Fehler beim Wiederherstellen von .tool-versions.${NC}"
-            # Weitere zu sichernde Dateien hier hinzufügen:
-            # cp -f "$TEMP_DIR/src/my_project_name/__init__.py" src/my_project_name/__init__.py # Nur, wenn init.py auch vom Skript überschrieben wurde und wiederhergestellt werden soll.
-            # ...
+        if [ "$last_exit_code" -ne 0 ]; then
+            echo -e "${RED}Skript mit Fehler abgebrochen (Exit-Code: $last_exit_code). Stelle gesicherte Dateien wieder her...${NC}"
+            # Stellen Sie hier nur Dateien wieder her, die tatsächlich in TEMP_DIR gesichert wurden
+            if [ -f "$TEMP_DIR/pyproject.toml" ]; then
+                cp -f "$TEMP_DIR/pyproject.toml" pyproject.toml || echo -e "${RED}Fehler beim Wiederherstellen von pyproject.toml.${NC}"
+            fi
+            if [ -f "$TEMP_DIR/.tool-versions" ]; then
+                cp -f "$TEMP_DIR/.tool-versions" .tool-versions || echo -e "${RED}Fehler beim Wiederherstellen von .tool-versions.${NC}"
+            fi
+
+            # WIEDERHERSTELLUNG des umbenannten Ordners
+            if [ -d "$TEMP_DIR/$OLD_PACKAGE_NAME.bak_dir" ]; then
+                echo -e "${RED}Stelle alten Paketordner 'src/$OLD_PACKAGE_NAME' wieder her...${NC}"
+                # Wenn der neue Ordner existiert (unvollständige Umbenennung oder Erstellung), löschen wir ihn
+                if [ -d "src/$PACKAGE_NAME" ]; then
+                    echo -e "${YELLOW}Entferne unvollständigen/neuen Paketordner 'src/$PACKAGE_NAME' vor Wiederherstellung.${NC}"
+                    rm -rf "src/$PACKAGE_NAME" || echo -e "${RED}Fehler beim Entfernen von 'src/$PACKAGE_NAME'.${NC}"
+                fi
+                # Bewege die gesicherte Version zurück
+                mv "$TEMP_DIR/$OLD_PACKAGE_NAME.bak_dir" "src/$OLD_PACKAGE_NAME" || echo -e "${RED}Fehler beim Wiederherstellen von src/$OLD_PACKAGE_NAME aus Sicherung.${NC}"
+            fi
+
+            echo -e "${GREEN}Wiederherstellung abgeschlossen.${NC}"
         else
             echo -e "${GREEN}Skript erfolgreich abgeschlossen. Lösche temporäre Sicherungen...${NC}"
         fi
         rm -rf "$TEMP_DIR" || echo -e "${RED}Fehler beim Löschen des temporären Verzeichnisses '$TEMP_DIR'.${NC}"
         echo "Temporäres Verzeichnis '$TEMP_DIR' gelöscht."
     fi
-    # pyproject.toml.bak wird immer gelöscht, unabhängig vom Skript-Exit-Code
-    if [ -f "pyproject.toml.bak" ]; then
-        rm -f "pyproject.toml.bak"
-        echo "Entfernte pyproject.toml.bak."
-    fi
 }
-trap cleanup EXIT # Führt cleanup-Funktion beim Beenden des Skripts aus
+# Setze den Trap VOR dem Start des Skripts, um auch Fehler beim TEMP_DIR-Erstellen abzufangen
+trap 'SCRIPT_EXIT_CODE=$?; cleanup; exit $SCRIPT_EXIT_CODE' EXIT
 
 # Erstelle ein temporäres Verzeichnis für Sicherungen
 echo -e "${YELLOW}Erstelle temporäres Verzeichnis für Dateisicherungen...${NC}"
 TEMP_DIR=$(mktemp -d -t python_setup_XXXXXX)
-if [ $? -ne 0 ]; then
-    echo -e "${RED}Fehler: Konnte temporäres Verzeichnis nicht erstellen.${NC}"
-    exit 1
-fi
 echo "Temporäres Verzeichnis: $TEMP_DIR"
 
 # Dateien sichern, bevor sie geändert werden
 echo -e "${YELLOW}Sichere kritische Dateien in '$TEMP_DIR'...${NC}"
-cp pyproject.toml "$TEMP_DIR/" || { echo -e "${RED}Fehler: Konnte pyproject.toml nicht sichern.${NC}"; exit 1; }
-cp .tool-versions "$TEMP_DIR/" || { echo -e "${RED}Fehler: Konnte .tool-versions nicht sichern.${NC}"; exit 1; }
-cp src/ "$TEMP_DIR/" || { echo -e "${RED}Fehler: Konnte src/ nicht sichern.${NC}"; exit 1; }
-# Sichern Sie hier JEDE Datei, die Ihr Skript modifiziert oder löscht!
-# z.B. wenn src/my_project_name umbenannt wird, sichern Sie den gesamten src/my_project_name Ordner!
-# cp -r src/my_project_name "$TEMP_DIR/" # Wenn dieser Ordner manipuliert wird
-# ... weitere relevante Dateien sichern ...
+cp pyproject.toml "$TEMP_DIR/"
+cp .tool-versions "$TEMP_DIR/"
+
+# SICHERUNG des alten Paketordners VOR der Umbenennung
+if [ -d "src/$OLD_PACKAGE_NAME" ]; then
+    cp -r "src/$OLD_PACKAGE_NAME" "$TEMP_DIR/$OLD_PACKAGE_NAME.bak_dir"
+    echo "Alter Paketordner 'src/$OLD_PACKAGE_NAME' gesichert."
+fi
 
 echo "Dateien erfolgreich gesichert."
 echo ""
