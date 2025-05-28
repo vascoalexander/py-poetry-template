@@ -124,33 +124,15 @@ rm -f pyproject.toml.bak
 echo "pyproject.toml wurde aktualisiert."
 
 # Erstelle oder aktualisiere __init__.py
-INIT_PY_CONTENT=$(cat <<EOF
-from importlib.metadata import PackageNotFoundError, version
-
-
-try:
-    __version__ = version("$PACKAGE_NAME")
-except PackageNotFoundError:
-    __version__ = "unknown"
-EOF
-)
+INIT_PY_CONTENT="from importlib.metadata import PackageNotFoundError, version\n\ntry:\n    __version__ = version(\"$PACKAGE_NAME\")\nexcept PackageNotFoundError:\n    __version__ = \"unknown\"\n"
 mkdir -p "src/$PACKAGE_NAME"
-echo "$INIT_PY_CONTENT" > "src/$PACKAGE_NAME/__init__.py" # No -e needed with heredoc and proper shell handling
+echo -e "$INIT_PY_CONTENT" > "src/$PACKAGE_NAME/__init__.py"
+echo "src/$PACKAGE_NAME/__init__.py wurde erstellt/aktualisiert."
 
 # main.py aktualisieren
-MAIN_PY_CONTENT=$(cat <<EOF
-import sys
-
-
-def main() -> None:
-    print("Hello, world from your new Python project!")
-    print(f"Python version: {sys.version}")
-
-if __name__ == '__main__':
-    main()
-EOF
-)
-echo "$MAIN_PY_CONTENT" > "src/$PACKAGE_NAME/main.py"
+MAIN_PY_CONTENT="import sys\n\n\ndef main() -> None:\n    print(\"Hello, world from your new Python project!\")\n    print(f\"Python version: {sys.version}\")\n\nif __name__ == '__main__':\n    main()\n"
+echo -e "$MAIN_PY_CONTENT" > "src/$PACKAGE_NAME/main.py"
+echo "src/$PACKAGE_NAME/main.py wurde erstellt/aktualisiert mit statischem Gruß."
 
 # --- 4: Mise Konfiguration erstellen ---
 # Erstelle .tool-versions für mise
