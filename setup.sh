@@ -184,7 +184,7 @@ cat .tool-versions
 # Debug ENDE
 
 echo "Installiere Poetry-Abhängigkeiten (einschließlich dev-Dependencies) auf dem Host..."
-mise exec poetry -- install --with dev
+poetry -- install --with dev
 if [ $? -ne 0 ]; then
     echo -e "${RED}Fehler beim Installieren der Poetry-Abhängigkeiten auf dem Host. Überprüfen Sie Ihre pyproject.toml.${NC}"
     exit 1
@@ -193,7 +193,7 @@ echo "Poetry-Abhängigkeiten auf dem Host erfolgreich installiert."
 
 echo "Generiere oder aktualisiere poetry.lock mit mise poetry..."
 # Korrektur: Auch hier eine Unter-Shell nutzen
-mise exec poetry -- lock
+poetry -- lock
 if [ $? -ne 0 ]; then
     echo -e "${RED}Fehler beim Generieren/Aktualisieren der poetry.lock Datei via mise. Überprüfen Sie Ihre Poetry-Installation und pyproject.toml.${NC}"
     exit 1
