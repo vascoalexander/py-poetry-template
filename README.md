@@ -9,6 +9,7 @@ Dieses Repository stellt ein robustes, modernes Template für neue Python-Projek
 - ⚡️ **Schnelles Setup:** Ein einfaches Skript initialisiert das gesamte Projekt.
 - 📦 **Poetry:** Moderne Verwaltung von Abhängigkeiten und Paketierung.
 - 🐍 **mise:** Toolchain-Manager für Python, Poetry & mehr.
+- 🐳 **Docker-Integration:** Vorkonfiguriertes Development Image für konsistente Umgebungen.
 - ✨ **Ruff:** Linting, Formatierung und einfache Codeanalyse in einem Tool.
 - 🔍 **Mypy:** Statische Typüberprüfung für robusten Code.
 - 🚫 **Pre-commit Hooks:** Automatische Checks vor jedem Commit.
@@ -26,6 +27,7 @@ Stelle sicher, dass folgende Tools installiert sind:
 
 - **Git** – zur Versionskontrolle
 - **[mise](https://mise.jdx.dev/)** – (empfohlen) verwaltet Python- & Poetry-Versionen lokal
+- **Docker** – für die Entwicklung in einer konsistenten Container-Umgebung.
 
 ---
 
@@ -34,11 +36,9 @@ Stelle sicher, dass folgende Tools installiert sind:
 1. **Template klonen und Projektverzeichnis anlegen:**
 
    ```bash
-   git clone https://github.com/DEIN_USERNAME/py-poetry-template.git my-new-project
+   git clone https://github.com/vascoalexander/py-poetry-template.git my-new-project
    cd my-new-project
    ```
-
-*(Optional: `--no-checkout` verwenden, wenn du das Template ohne Git-Verlauf nutzen willst.)*
 
 2. **Setup-Skript ausführen:**
 
@@ -46,11 +46,11 @@ Stelle sicher, dass folgende Tools installiert sind:
    bash setup.sh
    ```
 
-   Das Skript fragt nach Basisinformationen (Projektname, Autor, etc.) und passt `pyproject.toml` sowie Verzeichnisstruktur an.
+   Das Skript fragt nach Basisinformationen (Projektname, Autor, Python-Version etc.) und passt die pyproject.toml sowie die Verzeichnisstruktur an. Es initialisiert auch mise für das Projekt, installiert Poetry und Python, generiert die poetry.lock Datei basierend auf deiner Konfiguration und baut das Docker Development Image. Zudem werden die Pre-commit Hooks installiert.
 
 3. **mise aktivieren:**
 
-   Ergänze deine Shell-Konfiguration:
+   Damit mise und die von ihm verwalteten Tools (wie poetry und python) direkt in deiner Shell verfügbar sind, füge diese Zeile zu deiner Shell-Konfigurationsdatei hinzu (z.B. ~/.bashrc oder ~/.zshrc):
 
    ```bash
    eval "$(mise activate bash)"  # oder zsh
@@ -62,66 +62,40 @@ Stelle sicher, dass folgende Tools installiert sind:
 
 ## 🧑‍💻 Entwicklung
 
-### 🔄 Abhängigkeiten installieren
+Alle gängigen Entwicklungsaufgaben sind im **Makefile** zusammengefasst und können über `make` ausgeführt werden. Die Befehle sind in "Host-seitige Commands" (die `mise` und Poetry direkt auf deinem System nutzen) und "Docker Container Commands" (die innerhalb des Docker Development Containers ausgeführt werden) unterteilt.
 
-```bash
-poetry install
+### 🛠️ Makefile-Befehle
+
+Eine vollständige Übersicht aller `make`-Befehle erhältst du jederzeit mit:
+
+Bash
+
+```
+make help
 ```
 
-Oder:
+Hier sind die wichtigsten Befehlsgruppen:
 
-```bash
-make install # oder make all
-```
+#### Host-seitige Commands (Ausführung direkt auf deinem System)
 
-### 🧪 Tests & Coverage
+Diese Befehle nutzen die von `mise` bereitgestellten Python- und Poetry-Installationen direkt auf deinem Host.
 
-```bash
-make test
-make coverage
-make coverage-html #(generiert html coverage report)
-```
+- **`make lint`**: Führt den Ruff Linter für deinen Quellcode und deine Tests aus.
+- **`make format`**: Führt den Ruff Formatter aus, um deinen Quellcode und deine Tests zu formatieren.
+- **`make check`**: Kombiniert `make lint` und führt zusätzlich statische Typüberprüfungen mit MyPy für deinen Quellcode und deine Tests aus.
+- **`make pre-commit`**: Führt alle in `.pre-commit-config.yaml` definierten Pre-commit Hooks manuell für alle Dateien aus. _Hinweis: Wenn Pre-commit Hooks Dateien modifizieren, schlägt der Lauf fehl. Du musst die geänderten Dateien stagen (`git add .`) und einen neuen Commit (`git commit`) ausführen, um die Korrekturen aufzunehmen._
 
-Oder manuell:
+#### Docker Container Commands (Ausführung im Development Container)
 
-```bash
-poetry run pytest
-poetry run pytest --cov=mein_paketname
-```
+Diese Befehle interagieren mit dem Docker Development Image. Sie stellen sicher, dass alle Operationen in einer konsistenten, isolierten Umgebung stattfinden.
 
-### 🧹 Linting & Formatierung
-
-```bash
-make lint
-make format
-```
-
-Oder direkt mit Ruff:
-
-```bash
-poetry run ruff check src/ tests/
-poetry run ruff format src/ tests/
-```
-
-### 🔎 Type Checking
-
-```bash
-make typecheck
-```
-
-Oder:
-
-```bash
-poetry run mypy src/
-```
-
-### 🔁 Pre-Commit Hooks
-
-Automatisch bei jedem `git commit`, manuell so:
-
-```bash
-make precommit
-```
+- **`make build`**: Baut das Docker Development Image (`<project_name>:dev`). Das Image wird automatisch mit deiner gewählten Python-Version und deinen Host-Benutzer-IDs erstellt.
+- **`make clean`**: Entfernt das gebaute Docker Development Image von deinem System.
+- **`make shell`**: Öffnet eine interaktive Bash-Shell direkt im Development Container. Hier kannst du innerhalb der containerisierten Umgebung arbeiten.
+- **`make test`**: Führt deine Unit- und Integrationstests mit Pytest innerhalb des Development Containers aus.
+- **`make coverage`**: Führt Pytest mit einem Code-Coverage-Report im Terminal innerhalb des Containers aus.
+- **`make coverage-html`**: Generiert einen detaillierten HTML-Code-Coverage-Report im Container und kopiert diesen in das `coverage_reports/htmlcov`-Verzeichnis auf deinem Host.
+- **`make run`**: Führt das Hauptanwendungsskript (`src/<package_name>/main.py`) innerhalb des Development Containers aus.
 
 ---
 
@@ -129,9 +103,10 @@ make precommit
 
 ```text
 .
-├── .github/                 # GitHub Workflows (optional)
-├── .mise.toml              # Toolchain-Versionen (mise)
+├── .github/                # GitHub Workflows (optional)
 ├── .pre-commit-config.yaml # Pre-commit Hook-Definitionen
+├── .dockerignore           # Pre-commit Hook-Definitionen
+├── .gitignore              # Pre-commit Hook-Definitionen
 ├── pyproject.toml          # Projekt- und Abhängigkeitskonfiguration
 ├── README.md
 ├── setup.sh                # Projektinitialisierung
