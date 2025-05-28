@@ -171,6 +171,18 @@ fi
 echo "Python und Poetry über mise erfolgreich installiert."
 
 # Installiere Poetry-Abhängigkeiten auf dem Host
+
+# --- ZUSÄTZLICHE DEBUG-SCHRITTE ---
+echo "DEBUG: Aktueller PATH:"
+echo "$PATH"
+
+echo "DEBUG: Inhalt des mise shims Verzeichnisses ($HOME/.local/share/mise/shims/):"
+ls -la "$HOME/.local/share/mise/shims/"
+
+echo "DEBUG: Inhalt von .tool-versions:"
+cat .tool-versions
+# Debug ENDE
+
 echo "Installiere Poetry-Abhängigkeiten (einschließlich dev-Dependencies) auf dem Host..."
 mise exec poetry -- install --with dev
 if [ $? -ne 0 ]; then
