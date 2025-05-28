@@ -46,8 +46,8 @@ build:
 		-f Dockerfile.dev \
 		-t $(IMAGE_TAG) \
 		--build-arg PYTHON_VERSION=$(PYTHON_VERSION) \
-		--build-arg USER_UID=$(shell id -u) \
-		--build-arg USER_GID=$(shell id -g) \
+		--build-arg USER_UID=$(HOST_UID) \
+		--build-arg USER_GID=$(HOST_GID) \
 		.
 
 # Tasks that run INSIDE the Docker Container
@@ -56,50 +56,55 @@ shell: build
 	docker run -it --rm \
 		-e PATH=$(CONTAINER_PATH) \
 		-u $(HOST_UID):$(HOST_GID) \
-		-v $(PWD):/app \
+		-v $(PWD):/workspace \
+		-w /workspace \
 		$(IMAGE_TAG) bash
 
 test: build
 	docker run --rm \
 		-e PATH=$(CONTAINER_PATH) \
 		-u $(HOST_UID):$(HOST_GID) \
-		-v $(PWD):/app \
+		-v $(PWD):/workspace \
+		-w /workspace \
 		$(IMAGE_TAG) \
-		mise exec -- poetry run pytest /app/tests
+		mise exec -- poetry run pytest tests
 
 coverage: build
 	docker run --rm \
 		-e PATH=$(CONTAINER_PATH) \
 		-u $(HOST_UID):$(HOST_GID) \
-		-v $(PWD):/app \
+		-v $(PWD):/workspace \
+		-w /workspace \
 		$(IMAGE_TAG) \
 		mise exec -- poetry run pytest --cov=src --cov-report=term-missing
 
 coverage-html: build
 	mkdir -p coverage_reports/htmlcov
-	chown $(shell id -u):$(shell id -g) coverage_reports/htmlcov
+	chown $(HOST_UID):$(HOST_GID) coverage_reports/htmlcov
 
 	docker run --rm \
 		-e PATH=$(CONTAINER_PATH) \
-		-u $(shell id -u):$(shell id -g) \
-		-v $(PWD):/app \
+		-u $(HOST_UID):$(HOST_GID) \
+		-v $(PWD):/workspace \
+		-w /workspace \
 		$(IMAGE_TAG) \
 		bash -c "\
 			rm -rf /tmp/htmlcov && \
 			mise exec -- poetry run pytest --cov=src --cov-report=html:/tmp/htmlcov && \
-			rm -rf /app/coverage_reports/htmlcov/* && \
-			cp -a /tmp/htmlcov/. /app/coverage_reports/htmlcov && \
-			chown -R $(shell id -u):$(shell id -g) /app/coverage_reports/htmlcov"
+			rm -rf /workspace/coverage_reports/htmlcov/* && \
+			cp -a /tmp/htmlcov/. /workspace/coverage_reports/htmlcov && \
+			chown -R $(HOST_UID):$(HOST_GID) /workspace/coverage_reports/htmlcov"
 
 run: build
 	docker run --rm \
 		-e PATH=$(CONTAINER_PATH) \
 		-u $(HOST_UID):$(HOST_GID) \
-		-v $(PWD):/app \
+		-v $(PWD):/workspace \
+		-w /workspace \
 		$(IMAGE_TAG) \
-		mise exec -- poetry run python /app/src/$(PACKAGE_NAME)/main.py
+		mise exec -- poetry run python src/$(PACKAGE_NAME)/main.py
 
-## Host-seitige Tasks
+# Host-seitige Tasks
 
 clean:
 	@echo "Removing Docker image: $(IMAGE_TAG)"
