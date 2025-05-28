@@ -172,7 +172,7 @@ echo "Python und Poetry über mise erfolgreich installiert."
 
 # Installiere Poetry-Abhängigkeiten auf dem Host
 echo "Installiere Poetry-Abhängigkeiten (einschließlich dev-Dependencies) auf dem Host..."
-mise exec poetry -- install --sync --with dev
+mise exec poetry -- install --with dev
 if [ $? -ne 0 ]; then
     echo -e "${RED}Fehler beim Installieren der Poetry-Abhängigkeiten auf dem Host. Überprüfen Sie Ihre pyproject.toml.${NC}"
     exit 1
