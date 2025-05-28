@@ -1,48 +1,86 @@
-# .github/workflows/ci.yml
 name: Python CI
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - master
+      - feature/docker-dev-env
   pull_request:
-    branches: [main]
+    branches:
+      - main
+      - master
 
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
+
     strategy:
       matrix:
-        python-version: ["3.13"]
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
 
     steps:
-      - uses: actions/checkout@v4
+    - name: Checkout Code
+      uses: actions/checkout@v4
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
+    - name: Set up Mise (Runtime Manager for GHA Host)
+      # Installiere mise auf dem GitHub Actions Runner.
+      # MISE_HOME wird hier auf ein temporäres Verzeichnis gesetzt.
+      # Der PATH wird aktualisiert, damit mise in nachfolgenden Schritten gefunden wird.
+      run: |
+        curl -sSf https://mise.run | sh
+        echo "${HOME}/.local/share/mise/bin" >> "$GITHUB_PATH"
+        echo "${HOME}/.local/share/mise/shims" >> "$GITHUB_PATH"
+      env:
+        MISE_HOME: ${{ runner.temp }}/.mise
 
-      - name: Install Poetry
-        run: pip install poetry
+    - name: Run setup.sh Script
+      # Führt dein setup.sh Skript aus.
+      # Wir übergeben die interaktiven Eingaben über eine Pipe,
+      # da GitHub Actions nicht interaktiv ist.
+      run: |
+        # Setze die Umgebungsvariablen, die das setup.sh benötigt
+        export PROJECT_NAME="ci_test_project"
+        export PROJECT_DESCRIPTION="CI test project for template"
+        export AUTHOR_NAME="GitHub Actions"
+        export AUTHOR_EMAIL="actions@github.com"
+        export PYTHON_VERSION="${{ matrix.python-version }}"
 
-      - name: Install dependencies
-        run: poetry install --no-root
+        # Führe setup.sh aus und übergebe die simulierten Eingaben
+        # Wichtig: Die Reihenfolge der "echo" muss der Reihenfolge der "read -p" im setup.sh entsprechen!
+        {
+          echo "$PROJECT_NAME"
+          echo "$PROJECT_DESCRIPTION"
+          echo "$AUTHOR_NAME"
+          echo "$AUTHOR_EMAIL"
+          echo "$PYTHON_VERSION"
+        } | ./setup.sh
 
-      - name: Run Ruff (Linting)
-        run: poetry run ruff check .
+      # ENV-Variablen hier sind nur zur Referenz, die eigentlichen werden oben exportiert
+      env:
+        PROJECT_NAME: ci_test_project
+        PROJECT_DESCRIPTION: CI test project for template
+        AUTHOR_NAME: GitHub Actions
+        AUTHOR_EMAIL: actions@github.com
+        PYTHON_VERSION: ${{ matrix.python-version }}
 
-      - name: Run Ruff (Formatting Check)
-        run: poetry run ruff format . --check
+    # --- Tests im Docker Container ausführen ---
+    # make test ruft docker run auf, das wiederum mise exec -- poetry run pytest im Container aufruft
+    - name: Run Tests in Docker Container
+      run: make test
 
-      - name: Run MyPy (Type Checking)
-        run: poetry run mypy src/
+    # --- Host-seitige Checks (via mise exec poetry) ---
+    # make check ruft ruff und mypy auf dem Host auf
+    - name: Run Linting/Checks on Host (via mise/poetry)
+      run: make check
 
-      - name: Run tests with coverage
-        run: |
-          poetry run pytest --cov=src --cov-report=xml --cov-report=html
+    # make pre-commit ruft die pre-commit Hooks auf dem Host auf
+    - name: Run Pre-commit hooks on Host (via mise/poetry)
+      run: make pre-commit
 
-      - name: Upload coverage report
-        uses: actions/upload-artifact@v4
-        with:
-          name: htmlcov
-          path: htmlcov
+    # Optional: Upload coverage to Codecov (wenn du es konfiguriert hast)
+    # - name: Upload coverage to Codecov
+    #   uses: codecov/codecov-action@v4
+    #   with:
+    #     token: ${{ secrets.CODECOV_TOKEN }}
+    #     fail_ci_if_error: true
