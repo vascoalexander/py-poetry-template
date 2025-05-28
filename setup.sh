@@ -246,10 +246,14 @@ echo ""
 echo -e "${YELLOW}Schritt 7: Pre-commit Hooks installieren (Host-seitig und via Docker)...${NC}"
 # Installiere den Pre-commit Client auf dem Host, damit die Git-Hooks funktionieren
 echo "Installiere 'pre-commit' Tool auf dem Host (falls noch nicht vorhanden)..."
-mise exec poetry -- run pre-commit install || {
-    echo -e "${RED}Fehler: Konnte pre-commit Hooks nicht über Poetry installieren. Prüfe deine Poetry-Installation und pyproject.toml.${NC}"
-    exit 1
-}
+pip install pre-commit || { echo "Warnung: Konnte 'pre-commit' nicht auf dem Host installieren. Bitte manuell installieren: pip install pre-commit"; }
+
+echo "Installiere Pre-commit Hooks in das Git Repository (host-seitig)..."
+# Dieser Befehl installiert die Git-Hooks (.git/hooks/pre-commit)
+pre-commit install
+if [ $? -ne 0 ]; then
+    echo -e "${RED}Fehler beim Installieren der host-seitigen pre-commit Hooks.${NC}"
+fi
 echo "Host-seitige Pre-commit Hooks installiert."
 
 # Optional: Führe einen ersten Lauf der pre-commit Hooks direkt nach der Installation aus
