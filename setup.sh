@@ -249,6 +249,12 @@ echo "Docker Development Image erfolgreich gebaut!"
 echo ""
 
 # --- 7. Pre-commit Hooks installieren (Host-seitig) ---
+# Check if ~/.local/bin exists and is not already in PATH
+if [ -d "$HOME/.local/bin" ] && [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
+    export PATH="$HOME/.local/bin:$PATH"
+    echo -e "${GREEN}Added $HOME/.local/bin to PATH.${NC}"
+fi
+
 echo -e "${YELLOW}Schritt 7: Pre-commit Hooks installieren (Host-seitig und via Docker)...${NC}"
 # Installiere den Pre-commit Client auf dem Host, damit die Git-Hooks funktionieren
 echo "Installiere 'pre-commit' Tool auf dem Host (falls noch nicht vorhanden)..."
