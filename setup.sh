@@ -215,7 +215,21 @@ else
 fi
 echo ""
 
-# --- 6. Docker Image bauen ---
+# --- 6. Schritt zur Prüfung der Docker-Berechtigungen ---
+echo -e "${YELLOW}Schritt 6: Prüfe Docker-Berechtigungen und baue Docker Development Image...${NC}"
+
+# Teste, ob der Benutzer Docker-Befehle ohne sudo ausführen kann
+# 'docker info' ist ein guter, harmloser Befehl, der die Berechtigungen prüft.
+if ! docker info &> /dev/null; then
+    echo -e "${RED}Fehler: Ihr Benutzer hat keine Berechtigung, Docker-Befehle auszuführen (ohne sudo).${NC}"
+    echo -e "${YELLOW}Bitte fügen Sie Ihren Benutzer zur 'docker'-Gruppe hinzu, indem Sie diesen Befehl ausführen:${NC}"
+    echo -e "${YELLOW}   sudo usermod -aG docker $USER${NC}"
+    echo -e "${YELLOW}Nachdem Sie diesen Befehl ausgeführt haben, melden Sie sich BITTE VOLLSTÄNDIG AB und wieder AN (oder starten Sie Ihren Computer neu), damit die Änderungen wirksam werden.${NC}"
+    echo -e "${YELLOW}Versuchen Sie dann, das Setup-Skript erneut auszuführen.${NC}"
+    exit 1 # Skript abbrechen, da Docker-Build ohne Berechtigungen nicht funktionieren wird.
+fi
+
+# --- 6.5 Docker Image bauen ---
 echo -e "${YELLOW}Schritt 7: Docker Development Image bauen...${NC}"
 echo "Starte den Build des Docker-Images (dies kann einen Moment dauern)..."
 if ! command -v make &> /dev/null; then
@@ -226,7 +240,7 @@ fi
 PYTHON_VERSION="$PYTHON_VERSION" make build
 
 if [ $? -ne 0 ]; then
-    echo -e "${RED}Fehler beim Bauen des Docker-Images. Überprüfen Sie Ihr Dockerfile.dev und die 'just' Ausgabe.${NC}"
+    echo -e "${RED}Fehler beim Bauen des Docker-Images. Überprüfen Sie Ihr Dockerfile.dev und die 'make' Ausgabe.${NC}"
     exit 1
 fi
 echo "Docker Development Image erfolgreich gebaut!"
@@ -249,7 +263,6 @@ echo "Host-seitige Pre-commit Hooks installiert."
 # Optional: Führe einen ersten Lauf der pre-commit Hooks direkt nach der Installation aus
 # Dies stellt sicher, dass alle initialen Formatierungen und Checks angewendet werden
 echo "Führe erste Pre-commit Checks aus (dies kann Dateien ändern)..."
-# Hier rufen wir das 'just' Kommando auf, um die Checks IM CONTAINER auszuführen
 pre-commit run --all-files || true
 echo "Initialer Pre-commit-Lauf abgeschlossen."
 echo ""
