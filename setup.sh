@@ -168,7 +168,6 @@ if [ $? -ne 0 ]; then
     echo -e "${RED}Fehler: Konnte Python und/oder Poetry nicht mit mise installieren. Bitte prüfen Sie Ihre mise-Installation und .tool-versions.${NC}"
     exit 1
 fi
-mise exec poetry -- --version
 echo "Python und Poetry über mise erfolgreich installiert."
 
 # Installiere Poetry-Abhängigkeiten auf dem Host
