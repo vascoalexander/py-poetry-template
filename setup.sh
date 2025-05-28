@@ -145,7 +145,7 @@ echo "src/$PACKAGE_NAME/main.py wurde erstellt/aktualisiert mit statischem Gruß
 # Erstelle .tool-versions für mise
 echo -e "${YELLOW}Schritt 2.5: Mise Konfiguration (.tool-versions und mise.toml) erstellen...${NC}"
 echo "python $PYTHON_VERSION" > .tool-versions
-echo "poetry latest" >> .tool-versions # Füge Poetry hinzu, damit mise es verwaltet
+echo "poetry 1.8.2" >> .tool-versions
 echo ".tool-versions für mise erstellt."
 
 # --- 4.5: Mise und Poetry auf dem Host installieren und Abhängigkeiten synchronisieren ---
@@ -168,6 +168,7 @@ if [ $? -ne 0 ]; then
     echo -e "${RED}Fehler: Konnte Python und/oder Poetry nicht mit mise installieren. Bitte prüfen Sie Ihre mise-Installation und .tool-versions.${NC}"
     exit 1
 fi
+mise exec poetry -- --version
 echo "Python und Poetry über mise erfolgreich installiert."
 
 # Installiere Poetry-Abhängigkeiten auf dem Host
